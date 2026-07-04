@@ -84,7 +84,9 @@
 .topbar input,
 .topbar select,
 .field-row input,
+.field-row textarea,
 .form-table input,
+.form-table textarea,
 .calculation input {
   height: 38px;
   border: 1px solid #d8e4e8;
@@ -94,6 +96,13 @@
   font: inherit;
   padding: 0 12px;
   outline: none;
+}
+
+.field-row input:disabled,
+.form-table input:disabled {
+  color: #697b82;
+  background: #eef2f3;
+  cursor: not-allowed;
 }
 
 .login-card input:focus,
@@ -295,8 +304,6 @@
 }
 
 .topbar {
-  position: sticky;
-  top: 0;
   z-index: 5;
   height: 66px;
   display: flex;
@@ -530,6 +537,43 @@
   background: #087aa4;
 }
 
+.stepper button.complete,
+.tabs button.complete,
+.tabs button.active {
+  color: #12805e;
+  border-color: #2aa876;
+  background: white;
+}
+
+.tabs button:disabled {
+  color: #9aa8ad;
+  border-color: #dce5e8;
+  background: #f4f7f8;
+  cursor: not-allowed;
+}
+
+.pdf-like {
+  background: #f7fafb;
+}
+
+.nbr-heading {
+  max-width: 980px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 0 auto 14px;
+  color: #1f2d32;
+}
+
+.nbr-heading strong {
+  font-size: 19px;
+}
+
+.nbr-heading span {
+  color: #687b82;
+  font-size: 12px;
+}
+
 .form-card {
   max-width: 980px;
   margin: 0 auto;
@@ -541,12 +585,18 @@
   box-shadow: 0 11px 34px rgba(69, 101, 112, 0.1);
 }
 
+.pdf-card {
+  background: #fff;
+  border: 1px solid #d7e0e3;
+  box-shadow: 0 10px 28px rgba(53, 75, 83, 0.08);
+}
+
 .assessment-grid {
   display: grid;
-  gap: 14px;
-  margin-top: 24px;
-  padding: 18px 28px;
-  border: 2px solid #2e3438;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 18px 24px;
+  border: 1px solid #2e3438;
 }
 
 .field-row {
@@ -556,6 +606,37 @@
   gap: 22px;
   color: #26373c;
   font-size: 15px;
+}
+
+.required {
+  margin-left: 3px;
+  color: #d32626;
+}
+
+.special-row {
+  align-items: start;
+}
+
+.special-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 8px 18px;
+}
+
+.special-options label,
+.job-type-row label,
+.inline-radios label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.special-options input,
+.job-type-row input,
+.inline-radios input {
+  width: 16px;
+  height: 16px;
+  accent-color: #15855f;
 }
 
 .bordered-note {
@@ -573,7 +654,8 @@
 .tabs {
   display: flex;
   gap: 7px;
-  margin-bottom: 22px;
+  max-width: 980px;
+  margin: 0 auto 12px;
   overflow-x: auto;
 }
 
@@ -586,12 +668,6 @@
   color: #65777d;
   background: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
-}
-
-.tabs button.active {
-  color: white;
-  border-color: #006d9d;
-  background: #006d9d;
 }
 
 .bangla {
@@ -619,10 +695,31 @@
   box-sizing: border-box;
 }
 
+.form-table textarea {
+  width: 100%;
+  min-height: 76px;
+  box-sizing: border-box;
+  border: 1px solid #d8e4e8;
+  border-radius: 3px;
+  padding: 9px 12px;
+  resize: vertical;
+  font: inherit;
+}
+
 .check-label {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.job-type-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: 18px;
+  color: #40595f;
+  white-space: normal;
 }
 
 .inline-radios {
@@ -699,6 +796,50 @@
   margin: 14px auto 0;
 }
 
+.pdf-actions {
+  padding: 10px 0;
+}
+
+.ghost-button,
+.outline-button,
+.next-button {
+  min-width: 96px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.ghost-button {
+  border: 1px solid #cfd9dd;
+  color: #7b898e;
+  background: #f8fafb;
+}
+
+.outline-button,
+.success-button {
+  border: 1px solid #2aa876;
+  color: #0f7b59;
+  background: white;
+}
+
+.next-button {
+  border: 1px solid #d3dde0;
+  color: #a0a9ad;
+  background: #f3f6f7;
+  cursor: not-allowed;
+}
+
+.next-button.enabled {
+  color: white;
+  border-color: #13906a;
+  background: #159b72;
+  cursor: pointer;
+}
+
 .secondary-button,
 .warning-button {
   height: 34px;
@@ -721,12 +862,144 @@
 
 .success-button {
   height: 34px;
-  border: 0;
   border-radius: 3px;
   padding: 0 15px;
-  color: white;
-  background: #2ca25f;
   font-weight: 700;
+}
+
+.success-button:disabled {
+  color: #a0a9ad;
+  border-color: #d3dde0;
+  background: #f3f6f7;
+  cursor: not-allowed;
+}
+
+.toast.success {
+  background: #159b72;
+  box-shadow: 0 10px 30px rgba(19, 121, 88, 0.18);
+}
+
+.toast.error {
+  background: #ca352c;
+}
+
+.candidate-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #cfdde1;
+  border-radius: 16px;
+  color: #527078;
+  background: white;
+  font-size: 13px;
+}
+
+.center-note {
+  margin: -5px 0 5px;
+  text-align: center;
+  color: #53686f;
+}
+
+.table-title {
+  margin: 0;
+  text-align: center;
+  color: #223941;
+  font-size: 18px;
+}
+
+.inline-detail {
+  max-width: 220px;
+  margin-left: 12px;
+}
+
+.admin-screen {
+  min-height: 100vh;
+  padding: 34px;
+  background: #f3f7f8;
+  color: #23383f;
+}
+
+.admin-header {
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 auto 18px;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.admin-header p {
+  margin: 4px 0 0;
+  color: #60717a;
+}
+
+.admin-grid {
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 auto 18px;
+}
+
+.admin-card {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  background: white;
+  border: 1px solid #d7e1e4;
+}
+
+.admin-card strong {
+  font-size: 28px;
+}
+
+.admin-card span {
+  color: #60717a;
+}
+
+.admin-table {
+  max-width: 1100px;
+}
+
+.admin-table .row-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mistake-panel {
+  margin-bottom: 22px;
+  padding: 14px 18px;
+  border: 1px solid #d8e1e4;
+  background: #f8fbfc;
+}
+
+.mistake-panel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.mistake-panel ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.hint {
+  color: #667982;
+  font-size: 12px;
+}
+
+.app-footer {
+  padding: 14px 20px 22px;
+  text-align: center;
+  color: #74858b;
+  font-size: 12px;
 }
 
 .inline-actions {

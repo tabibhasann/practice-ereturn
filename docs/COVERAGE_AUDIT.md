@@ -1,62 +1,74 @@
-# Coverage Audit After Frame Review
+# Coverage Audit
 
-This audit compares the saved video frames/contact sheets with the practice app in `practice-ereturn/`.
+This audit reflects the current implementation after reviewing the new PDFs in `New video and website pdf prints/` and the newer assessment video.
 
-## Reference Folders
+## Confirmed In The App
 
-- Important frames: `extracted/important_frames/`
-- Original frame extraction: `extracted/frames/`
-- Contact sheets: `extracted/contact_01.jpg`, `extracted/contact_02.jpg`, `extracted/contact_03.jpg`
-- Latest implementation screenshots: `extracted/screenshots/`
+1. Office shell with `eReturn OFFICE`, sidebar items, assessment-year selector, search, `Third Party User 1`, and avatar.
+2. Trainee login with any name/password.
+3. Admin login using `admin / admin2026`.
+4. Trainee dashboard with only one row and initial status `NOT_INITIALIZED`.
+5. `Entry` starts a fresh blank attempt.
+6. Assessment page based on the video:
+   - register serial number
+   - register volume number
+   - filing date
+   - TIN
+   - tax year
+   - section
+   - taxpayer name
+   - circle/zone
+   - residential status radios
+   - special-status checkboxes
+   - birth/spouse/contact/employer/business/BIN/partner fields
+7. Required-field validation with red error toast.
+8. Successful draft save with green toast.
+9. `Next` locked until save draft.
+10. `Income and Tax summary` is the only useful income tab at first.
+11. Employment checkbox plus required job type enables `Income from employment`.
+12. Rent checkbox enables `Income from rent`.
+13. Financial-assets checkbox enables `Income from financial assets`.
+14. Tax-rebate checkbox enables `Tax rebate`.
+15. Amount fields for unchecked income rows are disabled.
+16. All numeric fields are manual, including total rows.
+17. Income summary rows 1-11 from PDF 1.
+18. Tax calculation rows 12-19 from PDF 1.
+19. Payment rows 20-26 from PDF 1.
+20. Employment schedule rows from PDF 2.
+21. Rent schedule rows from PDF 3.
+22. Financial-assets schedule rows from PDF 4.
+23. Rebate schedule rows from PDFs 5-6.
+24. Assets Summary rows from PDF 7.
+25. Living Expenditure rows from PDFs 8-9.
+26. Final `Save Return` unlocks only after saving `Living Expenditure`.
+27. Submitted attempt is saved locally and the trainee returns to the one-row dashboard.
+28. Admin dashboard lists users, attempt counts, latest submission, score, and preview.
 
-## Added To The App
+## Placeholder Or Future Work
 
-The app now includes these sections visible in the video:
+- Supabase is not connected yet by request. Attempts are currently stored in localStorage.
+- Scoring and mistake detection are placeholder rules until final marking criteria are provided.
+- The admin preview summarizes the attempt; it is not yet a full PDF-style return renderer.
+- Exact pixel-perfect matching may still need small spacing/color tweaks after stakeholder review, but the field coverage and interaction logic are in place.
 
-1. eReturn Office login with `User Manual`, `User ID`, `Reset password?`, and link to TIN Registration.
-2. Separate TIN Registration practice screen with `TIN REGISTRATION` banner, nav buttons, login form, quick-management buttons, and eReturn user link.
-3. eReturn Office shell with sidebar, year selector, search, third-party user, avatar, and collapse control.
-4. PSR Detail Entries dashboard with filter panel, 12 digit TIN input, assessment year/status selectors, reset, show-entries selector, and expanded PSR table columns.
-5. Assessment form expanded to rows ১-১৪ with personal/contact/employer/business/BIN/partner fields.
-6. Income and Tax summary expanded through rows ১-১০ plus total row, including employment-type radio controls for salary income.
-7. Income from employment table expanded with salary/allowance/exemption/taxable amount columns.
-8. Income from rent / house property workflow with property location/description, annual rental income, claimed expenses, municipal/local tax, land revenue, interest/mortgage/capital charge, insurance, vacancy, other, and net income.
-9. Financial asset income table with bank interest/profit, dividend, savings certificate profit, securities income, other, and net.
-10. Tax calculation table with rows ১১-১৯: total income, taxable-income tax, rebate, post-rebate tax, minimum tax, payable tax, surcharge/environment surcharge, special interest/fine, and total payable tax.
-11. Tax payment table with rows ২০-২৬: source tax, advance tax, refundable adjustment, tax paid with return, total paid tax, excess payment, and tax-exempt/tax-free income.
-12. Investment rebate table with visible investment/rebate categories.
-13. Assets step with `Asset Summary` and `Living Expenditure` tabs.
-14. Asset Summary long statement covering business capital, director shares, partnership capital, non-agricultural property, agricultural property, financial assets, savings/DPS, loans, deposits, provident fund, motor vehicles, jewelry, furniture/electronics, other assets, liabilities, current/previous net wealth, and total assets.
-15. Living Expenditure table with expense/source-of-fund rows and a green `Save Return` style action.
-16. Preview expanded from one page to multiple generated return-style pages:
-    - Summary page.
-    - Individual taxpayer return page with photo/tick-box identity layout.
-    - Tax computation/payment/refund page.
-    - Assets/liabilities/source-of-fund page.
-    - Generated schedules including employment, house property, and investment tax credit.
-    - Instruction/checklist page.
+## Verification Run
 
-## Still Not Perfect / Cannot Guarantee
-
-- Some Bangla labels in the video are small, blurred, or partially hidden by cursor/highlight. I recreated every distinct section and all labels that were readable or inferable from the frames.
-- The generated Excel/PDF output is represented as native HTML pages, not a real spreadsheet export.
-- Data propagation is partial: main totals update from the practice income table, but every schedule row is not wired into one official tax computation engine.
-- The UI is a training simulator, not a connection to the real NBR server.
-
-## Verification
-
-Latest build passes with:
+The current implementation was verified with:
 
 ```bash
-cd practice-ereturn
+npm run lint
 npm run build
 ```
 
-Latest screenshots generated:
+An automated Chromium flow also passed:
 
-- `extracted/screenshots/app-tin-registration.png`
-- `extracted/screenshots/app-dashboard-expanded.png`
-- `extracted/screenshots/app-income-expanded.png`
-- `extracted/screenshots/app-assets-expanded.png`
-- `extracted/screenshots/app-living-expenditure.png`
-- `extracted/screenshots/app-preview-expanded.png`
+- trainee login
+- one-row `NOT_INITIALIZED` dashboard
+- assessment validation
+- save draft / next unlock
+- dynamic income tabs
+- rent required-field validation
+- assets summary to living expenditure
+- final save return
+- admin dashboard
+- admin preview

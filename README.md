@@ -1,27 +1,40 @@
 # Practice eReturn Office
 
-A local training simulator for the Bangladesh NBR eReturn Office data-entry workflow shown in the supplied screen-recording video.
+A local training simulator for the Bangladesh NBR eReturn Office data-entry workflow shown in the supplied PDFs and video.
 
-This is not connected to the real NBR system. It is a safe practice clone for learning the flow before entering data into the production website.
+This is not connected to the real NBR website. It is a safe practice clone where trainees can repeatedly fill a return-like form before using the production system.
 
-## What It Includes
+## Current Flow
 
-- eReturn Office login screen
-- TIN Registration login/context screen
-- PSR Detail Entries dashboard with filters and status columns
-- Assessment form
-- Income and Tax forms:
-  - income summary
-  - employment income
-  - rent / house property income
-  - financial asset income
-  - tax calculation
-  - tax payment
-  - investment rebate
-- Assets forms:
-  - asset summary
-  - living expenditure/source of fund
-- Multi-page generated return preview with schedules and instruction/checklist page
+- Normal users sign in with any name and password.
+- The trainee dashboard shows exactly one `NOT_INITIALIZED` PSR row.
+- Clicking `Entry` opens a blank attempt.
+- The form starts at `Assessment`, then moves to `Income and Tax`, then `Assets`.
+- `Save Draft` validates required red-star fields. Errors show a red toast; successful saves show a green toast.
+- `Next` becomes available only after the current page is saved.
+- Income schedule tabs appear only after the matching source is selected:
+  - employment + job type enables `Income from employment`
+  - rent enables `Income from rent`
+  - financial assets enables `Income from financial assets`
+  - tax rebate enables `Tax rebate`
+- Number fields are manual. Totals are not automatically calculated.
+- `Save Return` appears on the final living-expenditure page after saving that page.
+- Submitted attempts are stored in localStorage for now, in a shape that can later be moved to Supabase.
+
+## Admin
+
+Admin credential:
+
+```text
+username: admin
+password: admin2026
+```
+
+The admin dashboard shows submitted users, attempt counts, placeholder scores, and a preview of each latest attempt. Scoring and mistake detection are deliberately placeholder rules until the final marking criteria are provided.
+
+## Supabase Note
+
+For about 500 attempts, JSON-only storage should be small, usually only a few megabytes. The main storage risk would come from saving generated PDFs, screenshots, or attachments; those should go into Supabase Storage only if needed.
 
 ## Run Locally
 
@@ -36,17 +49,14 @@ Open:
 http://127.0.0.1:5173/
 ```
 
-## Build
+## Verify
 
 ```bash
+npm run lint
 npm run build
 ```
 
-## Project Notes
-
-The video source was a compressed WhatsApp screen recording, so some tiny Bangla labels were partially blurred or covered by the cursor. The implementation recreates every distinct visible screen/section that could be identified from the extracted frames.
-
-Read:
+More context:
 
 - [Project Explanation](docs/PROJECT_EXPLANATION.md)
 - [Coverage Audit](docs/COVERAGE_AUDIT.md)
