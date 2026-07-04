@@ -482,7 +482,7 @@ function LoginScreen({ onLogin, toast }) {
         <h1>Welcome!</h1>
         <p>Sign in to start a practice attempt</p>
         <label>
-          Name / Admin username
+          Username
           <input value={userName} onChange={(event) => setUserName(event.target.value)} autoFocus />
         </label>
         <label>
@@ -490,7 +490,6 @@ function LoginScreen({ onLogin, toast }) {
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </label>
         <button type="submit" className="primary-button">Sign In</button>
-        <p className="hint">Admin credential: admin / admin2026</p>
       </form>
     </div>
   )
@@ -656,10 +655,10 @@ function FormWorkspace(props) {
       </div>
       {step === 'Income and Tax' && (
         <div className="tabs">
-          {['Income and Tax summary', 'Income from employment', 'Income from rent', 'Income from financial assets', 'Tax rebate'].map((item) => {
-            const available = availableIncomeTabs.includes(item)
+          {availableIncomeTabs.map((item) => {
+            const saved = Boolean(attempt.savedTabs[item])
             return (
-              <button type="button" key={item} disabled={!available} className={incomeTab === item ? 'active' : available ? 'complete' : ''} onClick={() => available && setIncomeTab(item)}>
+              <button type="button" key={item} className={incomeTab === item ? 'active' : saved ? 'complete' : ''} onClick={() => setIncomeTab(item)}>
                 {item}
               </button>
             )
@@ -669,7 +668,7 @@ function FormWorkspace(props) {
       {step === 'Assets' && (
         <div className="tabs">
           {['Assets Summary', 'Living Expenditure'].map((item) => (
-            <button type="button" key={item} className={assetTab === item ? 'active' : ''} onClick={() => setAssetTab(item)}>
+            <button type="button" key={item} className={assetTab === item ? 'active' : attempt.savedTabs[item] ? 'complete' : ''} onClick={() => setAssetTab(item)}>
               {item}
             </button>
           ))}
@@ -946,6 +945,7 @@ function AssetsForm({ attempt, patchAttempt, assetTab }) {
 }
 
 function AdminDashboard({ attempts, onLogout, onPreview }) {
+  const [expandedUsers, setExpandedUsers] = useState({})
   const grouped = attempts.reduce((acc, attempt) => {
     acc[attempt.userName] = acc[attempt.userName] || []
     acc[attempt.userName].push(attempt)
@@ -967,19 +967,37 @@ function AdminDashboard({ attempts, onLogout, onPreview }) {
         <div className="admin-card"><strong>{attempts.length ? Math.round(attempts.reduce((sum, item) => sum + Number(item.score || 0), 0) / attempts.length) : 0}</strong><span>Average mark</span></div>
       </section>
       <table className="data-table admin-table">
-        <thead><tr><th>User</th><th>Attempts</th><th>Latest attempt</th><th>Score</th><th>Action</th></tr></thead>
+        <thead><tr><th>User</th><th>Attempts</th><th>Latest attempt</th><th>Latest score</th><th>Action</th></tr></thead>
         <tbody>
-          {Object.entries(grouped).map(([userName, userAttempts]) => {
+          {Object.entries(grouped).flatMap(([userName, userAttempts]) => {
             const latest = userAttempts[0]
-            return (
+            const expanded = Boolean(expandedUsers[userName])
+            const userRow = (
               <tr key={userName}>
                 <td>{userName}</td>
                 <td>{userAttempts.length}</td>
                 <td>{new Date(latest.submittedAt || latest.createdAt).toLocaleString()}</td>
                 <td>{latest.score}/100</td>
-                <td><button type="button" className="row-button" onClick={() => onPreview(latest)}><Eye size={14} /> Preview</button></td>
+                <td className="admin-actions">
+                  <button type="button" className="row-button" onClick={() => setExpandedUsers((current) => ({ ...current, [userName]: !expanded }))}>
+                    {expanded ? 'Hide attempts' : 'View attempts'}
+                  </button>
+                  <button type="button" className="row-button" onClick={() => onPreview(latest)}><Eye size={14} /> Latest</button>
+                </td>
               </tr>
             )
+            const attemptRows = expanded
+              ? userAttempts.map((item, index) => (
+                <tr key={item.id} className="attempt-detail-row">
+                  <td>Attempt {userAttempts.length - index}</td>
+                  <td>{item.status}</td>
+                  <td>{new Date(item.submittedAt || item.createdAt).toLocaleString()}</td>
+                  <td>{item.score}/100</td>
+                  <td><button type="button" className="row-button" onClick={() => onPreview(item)}><Eye size={14} /> Preview attempt</button></td>
+                </tr>
+              ))
+              : []
+            return [userRow, ...attemptRows]
           })}
         </tbody>
       </table>
