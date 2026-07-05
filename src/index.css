@@ -1,5 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap");
+
 :root {
-  font-family: "Noto Sans Bengali", "Bangla MN", "Hind Siliguri", "Segoe UI", Arial, sans-serif;
+  font-family: "Inter", "Noto Sans Bengali", "Segoe UI", Arial, sans-serif;
   color: #1f333a;
   background: #edf5f6;
   font-synthesis: none;

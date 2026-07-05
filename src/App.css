@@ -722,7 +722,7 @@ button:not(:disabled):hover {
 }
 
 .bangla {
-  font-family: "Noto Sans Bengali", "Bangla MN", "Hind Siliguri", system-ui, sans-serif;
+  font-family: "Noto Sans Bengali", "Inter", "Segoe UI", sans-serif;
 }
 
 .form-table th {
