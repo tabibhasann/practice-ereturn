@@ -355,7 +355,9 @@ button:not(:disabled):hover {
 
 .form-mode .topbar {
   height: 54px;
-  grid-template-columns: 1fr 128px 300px auto 36px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
   background: #fff;
 }
 
@@ -415,9 +417,12 @@ button:not(:disabled):hover {
 
 .user-label {
   color: #5b7781;
-  font-size: 19px;
+  max-width: 190px;
+  overflow: hidden;
+  font-size: 14px;
   line-height: 1;
   text-decoration: none;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -759,6 +764,13 @@ button:not(:disabled):hover {
   gap: 18px;
   color: #26373c;
   font-size: 14px;
+  line-height: 1.55;
+}
+
+.field-row > span:first-child,
+.special-row > span:first-child,
+.special-options label {
+  line-height: 1.65;
 }
 
 .field-row input {
@@ -850,6 +862,7 @@ button:not(:disabled):hover {
 
 .bangla {
   font-family: "Noto Sans Bengali", "Inter", "Segoe UI", sans-serif;
+  line-height: 1.55;
 }
 
 .form-table th {
@@ -916,6 +929,7 @@ button:not(:disabled):hover {
 .rent-table td {
   height: 46px;
   padding: 6px 10px;
+  line-height: 1.55;
 }
 
 .rent-table .rent-property-cell {
@@ -1367,6 +1381,12 @@ button:not(:disabled):hover {
   padding: 10px 14px;
   color: white;
   background: #087aa4;
+}
+
+.preview-close-button {
+  width: 42px;
+  justify-content: center;
+  padding: 10px;
 }
 
 .return-page {

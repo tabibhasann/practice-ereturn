@@ -10,6 +10,7 @@ import {
   Search,
   Send,
   UserRound,
+  X,
 } from 'lucide-react'
 import './App.css'
 import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
@@ -1380,6 +1381,7 @@ function AttemptPreview({ attempt, onBack, onNotify, admin = false }) {
     <div className="preview-screen">
       <div className="preview-toolbar">
         <button type="button" onClick={onBack}><ChevronLeft size={18} /> Back</button>
+        <button type="button" className="preview-close-button" aria-label="Close preview" onClick={onBack}><X size={20} /></button>
       </div>
       <article className="return-page full-preview-page">
         <div className="return-header">
