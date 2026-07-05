@@ -35,20 +35,20 @@ const traineeRow = {
 }
 
 const assessmentFields = [
-  { key: 'registerSerial', label: 'রিটার্ন রেজিস্টারের ক্রমিক নম্বর', required: true, value: '417940431464', disabled: true },
+  { key: 'registerSerial', label: 'রিটার্ন রেজিস্টারের ক্রমিক নম্বর', required: true, value: '' },
   { key: 'registerVolume', label: 'রিটার্ন রেজিস্টারের ভল্যুম নম্বর', required: true, value: '' },
-  { key: 'filingDate', label: 'রিটার্ন দাখিলের তারিখ', required: true, value: '02-04-2026' },
-  { key: 'tin', no: '১', label: 'টিআইএন', required: true, value: '417940431464', disabled: true },
-  { key: 'taxYear', no: '২', label: 'কর বছর', required: true, value: '2025-2026', disabled: true },
-  { key: 'section', no: '৩', label: 'ধারা', required: true, value: '180', disabled: true },
-  { key: 'name', no: '৪', label: 'করদাতার নাম', required: false, value: 'SUBRATA SARKER', readOnly: true },
-  { key: 'circle', no: '৫(ক)', label: 'সার্কেল', required: false, value: 'Circle-274 (Salary)', readOnly: true },
-  { key: 'zone', no: '৫(খ)', label: 'কর অঞ্চল', required: false, value: '13, Dhaka', readOnly: true },
-  { key: 'resident', no: '৬', label: 'আবাসিক মর্যাদা', required: true, value: 'Resident', type: 'radio', options: ['Resident', 'Non Resident'] },
+  { key: 'filingDate', label: 'রিটার্ন দাখিলের তারিখ', required: true, value: '' },
+  { key: 'tin', no: '১', label: 'টিআইএন', required: true, value: '' },
+  { key: 'taxYear', no: '২', label: 'কর বছর', required: true, value: '' },
+  { key: 'section', no: '৩', label: 'ধারা', required: true, value: '' },
+  { key: 'name', no: '৪', label: 'করদাতার নাম', required: false, value: '' },
+  { key: 'circle', no: '৫(ক)', label: 'সার্কেল', required: false, value: '' },
+  { key: 'zone', no: '৫(খ)', label: 'কর অঞ্চল', required: false, value: '' },
+  { key: 'resident', no: '৬', label: 'আবাসিক মর্যাদা', required: true, value: '', type: 'radio', options: ['Resident', 'Non Resident'] },
   { key: 'birthDate', no: '৮', label: 'জন্ম তারিখ', required: false, value: '', placeholder: 'দিন-মাস-বৎসর' },
   { key: 'spouseName', no: '৯', label: 'স্ত্রী/স্বামীর নাম', required: false, value: '' },
   { key: 'spouseTin', no: '১০', label: 'স্ত্রী/স্বামী করদাতা হলে টিআইএন', required: false, value: '' },
-  { key: 'presentAddress', no: '১১', label: 'যোগাযোগের ঠিকানা', required: false, value: 'House 11, road 113/A, Gulshan, Dhaka', readOnly: true },
+  { key: 'presentAddress', no: '১১', label: 'যোগাযোগের ঠিকানা', required: false, value: '' },
   { key: 'telephone', label: 'টেলিফোন', required: false, value: '' },
   { key: 'mobile', label: 'মোবাইল', required: false, value: '' },
   { key: 'email', label: 'ই-মেইল', required: false, value: '' },
@@ -223,12 +223,12 @@ const livingRows = [
 ]
 
 function emptyRecord(rows, prefix = '') {
-  return Object.fromEntries(rows.map((row, index) => [`${prefix}${index}`, '0']))
+  return Object.fromEntries(rows.map((row, index) => [`${prefix}${index}`, '']))
 }
 
 function emptyEmploymentRecord() {
   return Object.fromEntries(
-    employmentRows.flatMap((row) => ['income', 'exempt', 'net'].map((col) => [`${row}:${col}`, '0'])),
+    employmentRows.flatMap((row) => ['income', 'exempt', 'net'].map((col) => [`${row}:${col}`, ''])),
   )
 }
 
@@ -247,13 +247,13 @@ function createBlankAttempt(userName = '', userCode = '') {
     assessment: Object.fromEntries(assessmentFields.map((field) => [field.key, field.value || ''])),
     specialFacilities: Object.fromEntries(specialFacilityRows.map((row) => [row, false])),
     incomeChecked: Object.fromEntries(incomeSummaryRows.filter((row) => !row.total).map((row) => [row.key, false])),
-    incomeAmounts: Object.fromEntries(incomeSummaryRows.map((row) => [row.key, '0'])),
+    incomeAmounts: Object.fromEntries(incomeSummaryRows.map((row) => [row.key, ''])),
     jobType: '',
-    tax: Object.fromEntries(taxRows.map((row) => [row.key, '0'])),
+    tax: Object.fromEntries(taxRows.map((row) => [row.key, ''])),
     taxChecked: { rebate: false },
-    payment: Object.fromEntries(paymentRows.flatMap((row) => [[row.key, '0'], row.hasText ? [`${row.key}Text`, ''] : []])),
+    payment: Object.fromEntries(paymentRows.flatMap((row) => [[row.key, ''], row.hasText ? [`${row.key}Text`, ''] : []])),
     employment: emptyEmploymentRecord(),
-    rent: Object.fromEntries(rentRows.map((row) => [row.key, row.type === 'textarea' ? '' : '0'])),
+    rent: Object.fromEntries(rentRows.map((row) => [row.key, ''])),
     financial: emptyRecord(financialRows, 'financial'),
     rebate: emptyRecord(rebateRows, 'rebate'),
     assets: emptyRecord(assetSummaryRows, 'asset'),
@@ -450,10 +450,21 @@ function App() {
     setAssetTab('Assets Summary')
   }
 
+  const currentSaveKey = () => (step === 'Income and Tax' ? incomeTab : step === 'Assets' ? assetTab : step)
+
   const patchAttempt = (updater) => {
     setAttempt((current) => {
       const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater }
-      return next
+      if (screen !== 'form') return next
+
+      const tabKey = currentSaveKey()
+      const savedTabs = { ...next.savedTabs }
+      const savedSteps = { ...next.savedSteps }
+      delete savedTabs[tabKey]
+      delete savedSteps[step]
+      if (step === 'Income and Tax') delete savedSteps.Assets
+
+      return { ...next, savedTabs, savedSteps }
     })
   }
 
@@ -495,11 +506,15 @@ function App() {
       return false
     }
     const tabKey = step === 'Income and Tax' ? incomeTab : step === 'Assets' ? assetTab : step
+    const savedTabs = { ...attempt.savedTabs, [tabKey]: true }
+    const stepComplete = step === 'Assessment'
+      || (step === 'Income and Tax' && availableIncomeTabs.every((item) => savedTabs[item]))
+      || (step === 'Assets' && ['Assets Summary', 'Living Expenditure'].every((item) => savedTabs[item]))
     const updated = {
       ...attempt,
       status: 'draft',
-      savedSteps: { ...attempt.savedSteps, [step]: true },
-      savedTabs: { ...attempt.savedTabs, [tabKey]: true },
+      savedSteps: stepComplete ? { ...attempt.savedSteps, [step]: true } : attempt.savedSteps,
+      savedTabs,
     }
     setAttempt(updated)
     showToast('success', 'Draft saved successfully.')
@@ -522,6 +537,20 @@ function App() {
     const error = validateCurrent()
     if (error) {
       showToast('error', error)
+      return
+    }
+    const requiredSaveKeys = ['Assessment', ...availableIncomeTabs, 'Assets Summary', 'Living Expenditure']
+    const missingSaveKey = requiredSaveKeys.find((key) => !attempt.savedTabs[key])
+    if (missingSaveKey) {
+      showToast('error', `Please save draft for ${missingSaveKey} before saving return.`)
+      return
+    }
+    if (!attempt.savedSteps.Assessment || !attempt.savedSteps['Income and Tax'] || !attempt.savedSteps.Assets) {
+      showToast('error', 'Please complete every step before saving return.')
+      return
+    }
+    if (availableIncomeTabs.includes('Income from rent') && !attempt.rent.propertyDescription.trim()) {
+      showToast('error', 'Please fill the required property description.')
       return
     }
     const submitted = {
@@ -614,6 +643,7 @@ function App() {
           onBack={() => setScreen('dashboard')}
           onSaveDraft={saveDraft}
           onNext={nextStep}
+          onRequireSave={() => showToast('error', 'Please save draft before going next.')}
           onPreview={() => setScreen('preview')}
           onSaveReturn={saveReturn}
         />
@@ -784,15 +814,20 @@ function FormWorkspace(props) {
     onBack,
     onSaveDraft,
     onNext,
+    onRequireSave,
     onPreview,
     onSaveReturn,
   } = props
   const stepIndex = steps.indexOf(step)
   const activeSaveKey = step === 'Income and Tax' ? incomeTab : step === 'Assets' ? assetTab : step
-  const nextEnabled = Boolean(attempt.savedTabs[activeSaveKey] || attempt.savedSteps[step])
+  const nextEnabled = Boolean(attempt.savedTabs[activeSaveKey])
   const finalPage = step === 'Assets' && assetTab === 'Living Expenditure'
   const finalSaved = Boolean(attempt.savedTabs['Living Expenditure'])
   const handleNext = () => {
+    if (!nextEnabled) {
+      onRequireSave()
+      return
+    }
     if (step === 'Income and Tax') {
       const currentTabIndex = availableIncomeTabs.indexOf(incomeTab)
       const nextIncomeTab = availableIncomeTabs[currentTabIndex + 1]
@@ -807,6 +842,43 @@ function FormWorkspace(props) {
     }
     onNext()
   }
+  const canOpenStep = (item) => {
+    const targetIndex = steps.indexOf(item)
+    if (targetIndex <= stepIndex) return true
+    if (item === 'Income and Tax') return Boolean(attempt.savedSteps.Assessment)
+    if (item === 'Assets') return Boolean(attempt.savedSteps['Income and Tax'])
+    return false
+  }
+  const requestStep = (item) => {
+    if (item === step) return
+    if (!canOpenStep(item)) {
+      onRequireSave()
+      return
+    }
+    setStep(item)
+    if (item === 'Income and Tax') setIncomeTab('Income and Tax summary')
+    if (item === 'Assets') setAssetTab('Assets Summary')
+  }
+  const requestIncomeTab = (item) => {
+    if (item === incomeTab) return
+    if (!attempt.savedTabs[incomeTab]) {
+      onRequireSave()
+      return
+    }
+    setIncomeTab(item)
+  }
+  const requestAssetTab = (item) => {
+    if (item === assetTab) return
+    if (item === 'Living Expenditure' && !attempt.savedTabs['Assets Summary']) {
+      onRequireSave()
+      return
+    }
+    if (!attempt.savedTabs[assetTab]) {
+      onRequireSave()
+      return
+    }
+    setAssetTab(item)
+  }
 
   return (
     <section className="form-space pdf-like">
@@ -819,7 +891,7 @@ function FormWorkspace(props) {
       </div>
       <div className="stepper">
         {steps.map((item) => (
-          <button type="button" key={item} className={step === item ? 'active' : attempt.savedSteps[item] ? 'complete' : ''} onClick={() => setStep(item)}>
+          <button type="button" key={item} disabled={!canOpenStep(item)} className={step === item ? 'active' : attempt.savedSteps[item] ? 'complete' : ''} onClick={() => requestStep(item)}>
             {item}
           </button>
         ))}
@@ -829,7 +901,7 @@ function FormWorkspace(props) {
           {availableIncomeTabs.map((item) => {
             const saved = Boolean(attempt.savedTabs[item])
             return (
-              <button type="button" key={item} className={incomeTab === item ? 'active' : saved ? 'complete' : ''} onClick={() => setIncomeTab(item)}>
+              <button type="button" key={item} className={incomeTab === item ? 'active' : saved ? 'complete' : ''} onClick={() => requestIncomeTab(item)}>
                 {item}
               </button>
             )
@@ -839,7 +911,7 @@ function FormWorkspace(props) {
       {step === 'Assets' && (
         <div className="tabs">
           {['Assets Summary', 'Living Expenditure'].map((item) => (
-            <button type="button" key={item} className={assetTab === item ? 'active' : attempt.savedTabs[item] ? 'complete' : ''} onClick={() => setAssetTab(item)}>
+            <button type="button" key={item} disabled={item === 'Living Expenditure' && !attempt.savedTabs['Assets Summary']} className={assetTab === item ? 'active' : attempt.savedTabs[item] ? 'complete' : ''} onClick={() => requestAssetTab(item)}>
               {item}
             </button>
           ))}
@@ -935,8 +1007,6 @@ function AssessmentForm({ attempt, patchAttempt }) {
                     </label>
                   ))}
                 </span>
-              ) : field.readOnly ? (
-                <span className="readonly-value">{attempt.assessment[field.key]}</span>
               ) : (
                 <input
                   type={field.type || 'text'}
@@ -988,7 +1058,7 @@ function IncomeSummary({ attempt, patchAttempt }) {
     patchAttempt((current) => ({
       ...current,
       incomeChecked: { ...current.incomeChecked, [row.key]: checked },
-      incomeAmounts: checked ? current.incomeAmounts : { ...current.incomeAmounts, [row.key]: '0' },
+      incomeAmounts: checked ? current.incomeAmounts : { ...current.incomeAmounts, [row.key]: '' },
       jobType: row.key === 'employment' && !checked ? '' : current.jobType,
     }))
   }
@@ -1090,27 +1160,75 @@ function RentSchedule({ attempt, patchAttempt }) {
   const patch = (key, value) => {
     patchAttempt((current) => ({ ...current, rent: { ...current.rent, [key]: value } }))
   }
+  const amountInput = (key) => <input value={attempt.rent[key]} onChange={(event) => patch(key, event.target.value)} />
   return (
     <div className="stacked-section bangla">
       <h2 className="bangla-title">তফসিল ২</h2>
-      <p className="center-note">লাল * চিহ্নিত ঘর অবশ্যই পূরণ করিতে হইবে</p>
-      <table className="form-table bangla">
+      <p className="center-note">ভাড়া হইতে আয় থাকিলে নিম্নোক্ত তফসিলটি পূরণ করিতে হইবে</p>
+      <p className="required-line">দয়া করে <b className="required">*</b> চিহ্নিত ঘরসমূহ পূরণ করুন</p>
+      <table className="form-table rent-table bangla">
+        <thead>
+          <tr>
+            <th>সম্পত্তির অবস্থান, বিবরণ ও মালিকানার অংশ<b className="required">*</b></th>
+            <th>মোট ভাড়া মূল্য পরিগণনা</th>
+            <th>টাকার পরিমাণ</th>
+            <th>টাকার পরিমাণ</th>
+          </tr>
+        </thead>
         <tbody>
-          {rentRows.map((row) => (
-            <tr key={row.key}>
-              <td>{row.no}</td>
-              <td>{row.label}{row.required && <b className="required">*</b>}</td>
-              <td>
-                {row.type === 'textarea' ? (
-                  <textarea value={attempt.rent[row.key]} onChange={(event) => patch(row.key, event.target.value)} />
-                ) : (
-                  <input value={attempt.rent[row.key]} onChange={(event) => patch(row.key, event.target.value)} />
-                )}
-              </td>
-            </tr>
-          ))}
+          <tr>
+            <td rowSpan="15" className="rent-property-cell">
+              <textarea value={attempt.rent.propertyDescription} onChange={(event) => patch('propertyDescription', event.target.value)} />
+            </td>
+            <td>১। বার্ষিক প্রাপ্ত ভাড়া বা বার্ষিক মূল্য, যাহা অধিক</td>
+            <td>{amountInput('annualRent')}</td>
+            <td rowSpan="5" />
+          </tr>
+          <tr><td>২। অগ্রিম প্রাপ্ত ভাড়া</td><td>{amountInput('advanceRent')}</td></tr>
+          <tr><td>৩। ভাড়া ব্যতীত অন্য কোনো সুবিধার মূল্য</td><td>{amountInput('benefitValue')}</td></tr>
+          <tr><td>৪। সমন্বয়কৃত অগ্রিম ভাড়া</td><td>{amountInput('adjustedAdvanceRent')}</td></tr>
+          <tr><td>৫। খালি থাকার জন্য ছাড়</td><td>{amountInput('vacancyAllowance')}</td></tr>
+          <tr><td colSpan="2">৬। মোট ভাড়ামূল্য [(১+২+৩)-৪-৫]</td><td>{amountInput('totalRentValue')}</td></tr>
+          <tr><td colSpan="2">৭। অনুমোদনযোগ্য বিয়োজনসমূহ</td><td>{amountInput('allowableDeduction')}</td></tr>
+          <tr><td>(ক) মেরামত, আদায় ইত্যাদি</td><td>{amountInput('municipalTax')}</td><td rowSpan="5" /></tr>
+          <tr><td>(খ) পৌর কর অথবা স্থানীয় কর</td><td>{amountInput('landRevenue')}</td></tr>
+          <tr><td>(গ) ভূমি রাজস্ব</td><td>{amountInput('loanInterest')}</td></tr>
+          <tr><td>(ঘ) পরিশোধিত ঋণের উপর সুদ / ব্যাংক / মূলধনি চার্জ</td><td>{amountInput('insurancePremium')}</td></tr>
+          <tr><td>(ঙ) অন্যান্য (যদি থাকে)</td><td>{amountInput('otherRentDeduction')}</td></tr>
+          <tr><td colSpan="2">৮। মোট অনুমোদনযোগ্য বিয়োজন</td><td>{amountInput('totalAllowableDeduction')}</td></tr>
+          <tr><td colSpan="2">৯। নীট আয় (ক্রমিক ৬ হইতে ক্রমিক ৮ এর বিয়োগফল)</td><td>{amountInput('netHouseIncome')}</td></tr>
+          <tr><td colSpan="2">১০। করদাতার অংশ (প্রযোজ্য ক্ষেত্রে)</td><td>{amountInput('taxpayerShare')}</td></tr>
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function MoneyInput({ value, onChange }) {
+  return (
+    <span className="money-input">
+      <span>টাকা</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} />
+    </span>
+  )
+}
+
+function AssetsSummary({ attempt, patchAttempt }) {
+  const patch = (index, value) => {
+    patchAttempt((current) => ({ ...current, assets: { ...current.assets, [`asset${index}`]: value } }))
+  }
+  return (
+    <div className="asset-statement bangla">
+      <h2 className="bangla-title">পরিসম্পদ দায় ও ব্যয় বিবরণী</h2>
+      <p className="center-note"><strong>পরিসম্পদ দায় ও ব্যয় বিবরণী উক্ত করদাতার জন্য প্রযোজ্য নয়</strong></p>
+      <div className="asset-lines">
+        {assetSummaryRows.map((row, index) => (
+          <label key={row} className="asset-line">
+            <span>{index + 1}। {row}</span>
+            <MoneyInput value={attempt.assets[`asset${index}`]} onChange={(value) => patch(index, value)} />
+          </label>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1127,7 +1245,9 @@ function PlainAmountTable({ title, rows, values, prefix, patch }) {
               <tr key={key}>
                 <td>{index + 1}।</td>
                 <td>{row}</td>
-                <td><input value={values[key]} onChange={(event) => patch({ ...values, [key]: event.target.value })} /></td>
+                <td>
+                  <input value={values[key]} onChange={(event) => patch({ ...values, [key]: event.target.value })} />
+                </td>
               </tr>
             )
           })}
@@ -1141,7 +1261,7 @@ function AssetsForm({ attempt, patchAttempt, assetTab }) {
   if (assetTab === 'Living Expenditure') {
     return <PlainAmountTable title="জীবনযাপন সংশ্লিষ্ট ব্যয়ের বিবরণী" rows={livingRows} values={attempt.living} prefix="living" patch={(living) => patchAttempt((current) => ({ ...current, living }))} />
   }
-  return <PlainAmountTable title="পরিসম্পদ দায় ও ব্যয় বিবরণী" rows={assetSummaryRows} values={attempt.assets} prefix="asset" patch={(assets) => patchAttempt((current) => ({ ...current, assets }))} />
+  return <AssetsSummary attempt={attempt} patchAttempt={patchAttempt} />
 }
 
 function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, onNotify, onPreview }) {

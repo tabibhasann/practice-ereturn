@@ -861,6 +861,99 @@ button:not(:disabled):hover {
   font: inherit;
 }
 
+.required-line {
+  margin: 0;
+  color: #263a40;
+  font-weight: 600;
+}
+
+.rent-table {
+  max-width: 980px;
+  margin: 0 auto;
+  table-layout: fixed;
+}
+
+.rent-table th:first-child,
+.rent-table td:first-child {
+  width: 250px;
+}
+
+.rent-table th:nth-child(2),
+.rent-table td:nth-child(2) {
+  width: 390px;
+}
+
+.rent-table th:nth-child(3),
+.rent-table th:nth-child(4),
+.rent-table td:nth-child(3),
+.rent-table td:nth-child(4) {
+  width: 165px;
+}
+
+.rent-table td {
+  height: 46px;
+  padding: 6px 10px;
+}
+
+.rent-property-cell {
+  vertical-align: top;
+}
+
+.rent-property-cell textarea {
+  min-height: 145px;
+  margin-top: 4px;
+}
+
+.asset-statement {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.asset-lines {
+  display: grid;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.asset-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  align-items: center;
+  gap: 28px;
+  min-height: 34px;
+  color: #263a40;
+  font-size: 14px;
+}
+
+.asset-line > span:first-child {
+  text-align: left;
+}
+
+.money-input {
+  height: 38px;
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  border: 1px solid #d8e4e8;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+.money-input span {
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #d8e4e8;
+  color: #263a40;
+}
+
+.money-input input {
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  padding: 0 12px;
+  font: inherit;
+}
+
 .check-label {
   display: flex;
   align-items: center;
