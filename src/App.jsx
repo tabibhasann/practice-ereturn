@@ -15,6 +15,7 @@ import './App.css'
 const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = 'admin2026'
 const ATTEMPTS_KEY = 'practice-ereturn-attempts'
+const USERS_KEY = 'practice-ereturn-users'
 
 const steps = ['Assessment', 'Income and Tax', 'Assets']
 
@@ -269,6 +270,22 @@ function writeAttempts(attempts) {
   localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts))
 }
 
+function readUsers() {
+  try {
+    return JSON.parse(localStorage.getItem(USERS_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function writeUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+}
+
+function normalizeUserName(userName) {
+  return userName.trim().toLowerCase()
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [screen, setScreen] = useState('login')
@@ -290,17 +307,42 @@ function App() {
   }
 
   const login = ({ userName, password }) => {
-    if (userName === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      setSession({ role: 'admin', userName })
+    const trimmedUserName = userName.trim()
+    const normalizedUserName = normalizeUserName(userName)
+    if (normalizedUserName === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      setSession({ role: 'admin', userName: ADMIN_USERNAME })
       setScreen('admin')
       return
     }
-    if (!userName.trim() || !password.trim()) {
-      showToast('error', 'Please enter your name and password.')
+    if (normalizedUserName === ADMIN_USERNAME) {
+      showToast('error', 'Incorrect password for this username.')
       return
     }
-    setSession({ role: 'trainee', userName: userName.trim() })
-    setAttempt(createBlankAttempt(userName.trim()))
+    if (!trimmedUserName || !password.trim()) {
+      showToast('error', 'Please enter your username and password.')
+      return
+    }
+
+    const users = readUsers()
+    const existingUser = users[normalizedUserName]
+    if (existingUser && existingUser.password !== password) {
+      showToast('error', 'Incorrect password for this username.')
+      return
+    }
+    if (!existingUser) {
+      writeUsers({
+        ...users,
+        [normalizedUserName]: {
+          userName: trimmedUserName,
+          password,
+          createdAt: new Date().toISOString(),
+        },
+      })
+    }
+
+    const accountName = existingUser?.userName || trimmedUserName
+    setSession({ role: 'trainee', userName: accountName, accountKey: normalizedUserName })
+    setAttempt(createBlankAttempt(accountName))
     setScreen('dashboard')
   }
 
@@ -630,6 +672,14 @@ function FormWorkspace(props) {
   const finalPage = step === 'Assets' && assetTab === 'Living Expenditure'
   const finalSaved = Boolean(attempt.savedTabs['Living Expenditure'])
   const handleNext = () => {
+    if (step === 'Income and Tax') {
+      const currentTabIndex = availableIncomeTabs.indexOf(incomeTab)
+      const nextIncomeTab = availableIncomeTabs[currentTabIndex + 1]
+      if (nextIncomeTab) {
+        setIncomeTab(nextIncomeTab)
+        return
+      }
+    }
     if (step === 'Assets' && assetTab === 'Assets Summary') {
       setAssetTab('Living Expenditure')
       return

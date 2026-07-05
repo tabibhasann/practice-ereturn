@@ -565,9 +565,9 @@ button:not(:disabled):hover {
 }
 
 .stepper button.active {
-  color: white;
+  color: #222;
   border-color: #222;
-  background: #252525;
+  background: white;
 }
 
 .stepper button.complete,
@@ -578,9 +578,9 @@ button:not(:disabled):hover {
 }
 
 .tabs button.active {
-  color: white;
+  color: #222;
   border-color: #222;
-  background: #252525;
+  background: white;
 }
 
 .tabs button:disabled {
@@ -716,9 +716,9 @@ button:not(:disabled):hover {
 }
 
 .tabs button.active {
-  color: white;
+  color: #222;
   border-color: #222;
-  background: #252525;
+  background: white;
 }
 
 .bangla {
