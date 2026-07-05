@@ -13,10 +13,9 @@ import {
   UserRound,
 } from 'lucide-react'
 import './App.css'
-import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 
-const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'admin2026'
+const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
 const ATTEMPTS_KEY = 'practice-ereturn-attempts'
 const USERS_KEY = 'practice-ereturn-users'
 
@@ -36,20 +35,20 @@ const traineeRow = {
 }
 
 const assessmentFields = [
-  { key: 'registerSerial', label: 'রিটার্ন রেজিস্টারের ক্রমিক নম্বর', required: true, value: '406', disabled: true },
+  { key: 'registerSerial', label: 'রিটার্ন রেজিস্টারের ক্রমিক নম্বর', required: true, value: '417940431464', disabled: true },
   { key: 'registerVolume', label: 'রিটার্ন রেজিস্টারের ভল্যুম নম্বর', required: true, value: '' },
-  { key: 'filingDate', label: 'রিটার্ন দাখিলের তারিখ', required: true, value: '', type: 'date' },
+  { key: 'filingDate', label: 'রিটার্ন দাখিলের তারিখ', required: true, value: '2026-04-02', type: 'date' },
   { key: 'tin', no: '১', label: 'টিআইএন', required: true, value: '417940431464', disabled: true },
   { key: 'taxYear', no: '২', label: 'কর বছর', required: true, value: '2025-2026', disabled: true },
   { key: 'section', no: '৩', label: 'ধারা', required: true, value: '180', disabled: true },
-  { key: 'name', no: '৪', label: 'করদাতার নাম', required: false, value: '' },
-  { key: 'circle', no: '৫(ক)', label: 'সার্কেল', required: false, value: '' },
-  { key: 'zone', no: '৫(খ)', label: 'কর অঞ্চল', required: false, value: '' },
+  { key: 'name', no: '৪', label: 'করদাতার নাম', required: false, value: 'SUBRATA SARKER', readOnly: true },
+  { key: 'circle', no: '৫(ক)', label: 'সার্কেল', required: false, value: 'Circle-274 (Salary)', readOnly: true },
+  { key: 'zone', no: '৫(খ)', label: 'কর অঞ্চল', required: false, value: '13, Dhaka', readOnly: true },
   { key: 'resident', no: '৬', label: 'আবাসিক মর্যাদা', required: true, value: 'Resident', type: 'radio', options: ['Resident', 'Non Resident'] },
   { key: 'birthDate', no: '৮', label: 'জন্ম তারিখ', required: false, value: '', placeholder: 'দিন-মাস-বৎসর' },
   { key: 'spouseName', no: '৯', label: 'স্ত্রী/স্বামীর নাম', required: false, value: '' },
   { key: 'spouseTin', no: '১০', label: 'স্ত্রী/স্বামী করদাতা হলে টিআইএন', required: false, value: '' },
-  { key: 'presentAddress', no: '১১', label: 'যোগাযোগের ঠিকানা', required: false, value: '' },
+  { key: 'presentAddress', no: '১১', label: 'যোগাযোগের ঠিকানা', required: false, value: 'House 11, road 113/A, Gulshan, Dhaka', readOnly: true },
   { key: 'telephone', label: 'টেলিফোন', required: false, value: '' },
   { key: 'mobile', label: 'মোবাইল', required: false, value: '' },
   { key: 'email', label: 'ই-মেইল', required: false, value: '' },
@@ -354,42 +353,32 @@ function App() {
     writeUsers(users)
   }, [users])
 
-  useEffect(() => {
+  const loadAdminData = async (adminCredentials) => {
     if (!isSupabaseConfigured) return
-    let cancelled = false
-    const loadSupabaseData = async () => {
-      setDataLoading(true)
-      const [usersResult, attemptsResult] = await Promise.all([
-        supabase.from('trainee_users').select('*').order('created_at', { ascending: false }),
-        supabase.from('return_attempts').select('*').order('submitted_at', { ascending: false }),
-      ])
-
-      if (cancelled) return
-      if (usersResult.error || attemptsResult.error) {
-        showToast('error', usersResult.error?.message || attemptsResult.error?.message || 'Could not load Supabase data.')
-      } else {
-        setUsers(userRowsToMap(usersResult.data || []))
-        setAttempts((attemptsResult.data || []).map(attemptRowToAttempt))
-      }
+    setDataLoading(true)
+    try {
+      const data = await callSupabaseFunction('admin-users', adminCredentials)
+      setUsers(userRowsToMap(data.users || []))
+      setAttempts((data.attempts || []).map(attemptRowToAttempt))
+    } catch (error) {
+      showToast('error', error.message || 'Could not load Supabase data.')
+    } finally {
       setDataLoading(false)
     }
+  }
 
-    loadSupabaseData()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const login = ({ userName, password }) => {
+  const login = async ({ userName, password }) => {
     const trimmedUserName = userName.trim()
     const normalizedUserName = normalizeUserName(userName)
-    if (normalizedUserName === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      setSession({ role: 'admin', userName: ADMIN_USERNAME })
-      setScreen('admin')
-      return
-    }
     if (normalizedUserName === ADMIN_USERNAME) {
-      showToast('error', 'Incorrect password for this username.')
+      if (!password) {
+        showToast('error', 'Please enter the admin password.')
+        return
+      }
+      const adminCredentials = { adminUsername: ADMIN_USERNAME, adminPassword: password }
+      await loadAdminData(adminCredentials)
+      setSession({ role: 'admin', userName: ADMIN_USERNAME, ...adminCredentials })
+      setScreen('admin')
       return
     }
     if (!trimmedUserName) {
@@ -397,7 +386,17 @@ function App() {
       return
     }
 
-    const existingUser = users[normalizedUserName]
+    let existingUser = users[normalizedUserName]
+    if (isSupabaseConfigured) {
+      try {
+        const data = await callSupabaseFunction('trainee-login', { username: trimmedUserName })
+        existingUser = userRowsToMap([data.user])[normalizeUserName(data.user.username)]
+        setUsers((current) => ({ ...current, [normalizeUserName(data.user.username)]: existingUser }))
+      } catch (error) {
+        showToast('error', error.message || 'This username was not created by admin.')
+        return
+      }
+    }
     if (!existingUser) {
       showToast('error', 'This username was not created by admin.')
       return
@@ -418,19 +417,17 @@ function App() {
     const key = normalizeUserName(username)
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('trainee_users')
-        .insert({ username, display_name: username })
-        .select('*')
-        .single()
-
-      if (error) {
+      try {
+        const data = await callSupabaseFunction('admin-create-username', {
+          adminUsername: session?.adminUsername,
+          adminPassword: session?.adminPassword,
+        })
+        setUsers((current) => ({ ...userRowsToMap([data.user]), ...current }))
+        showToast('success', `Created username ${data.user.username}.`)
+      } catch (error) {
         showToast('error', error.message)
         return
       }
-
-      setUsers((current) => ({ ...userRowsToMap([data]), ...current }))
-      showToast('success', `Created username ${username}.`)
       return
     }
 
@@ -535,24 +532,16 @@ function App() {
       mistakes: buildPlaceholderMistakes(attempt),
     }
     if (isSupabaseConfigured) {
-      const currentUser = users[session?.accountKey || '']
-      const { data, error } = await supabase
-        .from('return_attempts')
-        .insert({
-          trainee_user_id: currentUser?.id || null,
-          username: currentUser?.username || session?.userName || submitted.userName,
-          score: submitted.score,
-          mistakes: submitted.mistakes,
-          payload: submitted,
+      try {
+        const data = await callSupabaseFunction('submit-attempt', {
+          username: session?.accountKey || session?.userName,
+          attempt: submitted,
         })
-        .select('*')
-        .single()
-
-      if (error) {
+        setAttempts((current) => [attemptRowToAttempt(data.attempt), ...current])
+      } catch (error) {
         showToast('error', error.message)
         return
       }
-      setAttempts((current) => [attemptRowToAttempt(data), ...current])
     } else {
       setAttempts((current) => [submitted, ...current])
     }
@@ -922,6 +911,7 @@ function AssessmentForm({ attempt, patchAttempt }) {
                 <input
                   type={field.type || 'text'}
                   disabled={field.disabled}
+                  readOnly={field.readOnly}
                   placeholder={field.placeholder}
                   value={attempt.assessment[field.key]}
                   onChange={(event) => setAssessment(field.key, event.target.value)}
