@@ -267,6 +267,15 @@ button:not(:disabled):hover {
   color: #23383f;
 }
 
+.office-shell.form-mode {
+  grid-template-columns: minmax(0, 1fr);
+  background: #fff;
+}
+
+.office-shell.form-mode .sidebar {
+  display: none;
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -339,13 +348,45 @@ button:not(:disabled):hover {
 .topbar {
   z-index: 5;
   height: 66px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto auto auto;
   align-items: center;
-  justify-content: flex-end;
   gap: 9px;
-  padding: 0 16px;
+  padding: 0 28px;
   background: rgba(247, 252, 253, 0.96);
   border-bottom: 1px solid #d8e3e7;
+}
+
+.form-mode .topbar {
+  height: 54px;
+  grid-template-columns: 48px 1fr 128px 300px auto 36px;
+  background: #fff;
+}
+
+.topbar-menu-square {
+  width: 42px;
+  height: 32px;
+  border: 1px solid #dce7ea;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.topbar-brand {
+  justify-self: center;
+  transform: translateX(270px);
+}
+
+.topbar-brand .brand span {
+  font-size: 24px;
+}
+
+.topbar-brand .brand small {
+  font-size: 11px;
+}
+
+.topbar-brand .brand strong {
+  margin-left: 43px;
+  font-size: 15px;
 }
 
 .topbar select {
@@ -512,6 +553,17 @@ button:not(:disabled):hover {
   position: relative;
 }
 
+.form-mode .workspace {
+  background: #fff;
+}
+
+.form-mode .app-footer {
+  width: calc(100% - 112px);
+  margin: 0 auto;
+  border: 1px solid #e4e8ea;
+  background: #fff;
+}
+
 .entry-header {
   max-width: 980px;
   display: flex;
@@ -521,6 +573,10 @@ button:not(:disabled):hover {
   margin: 0 auto 12px;
   color: #5b7781;
   font-size: 14px;
+}
+
+.form-mode .entry-header {
+  display: none;
 }
 
 .text-button {
@@ -548,7 +604,7 @@ button:not(:disabled):hover {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  max-width: 980px;
+  max-width: 1100px;
   margin: 0 auto 10px;
   overflow-x: auto;
 }
@@ -591,15 +647,15 @@ button:not(:disabled):hover {
 }
 
 .pdf-like {
-  background: #f7fafb;
+  background: #fff;
 }
 
 .nbr-heading {
-  max-width: 980px;
+  max-width: 1040px;
   display: grid;
   justify-items: center;
   gap: 2px;
-  margin: 0 auto 14px;
+  margin: 54px auto 28px;
   color: #1f2d32;
 }
 
@@ -613,37 +669,85 @@ button:not(:disabled):hover {
 }
 
 .form-card {
-  max-width: 980px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 28px 30px;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,0.88), rgba(246,252,252,0.86)),
-    repeating-linear-gradient(30deg, rgba(80, 149, 157, 0.045) 0 10px, transparent 10px 22px);
-  border: 1px solid #e1eaed;
-  box-shadow: 0 11px 34px rgba(69, 101, 112, 0.1);
+  padding: 0;
+  background: #fff;
+  border: 0;
+  box-shadow: none;
 }
 
 .pdf-card {
   background: #fff;
+  border: 0;
+  box-shadow: none;
+}
+
+.assessment-top-fields {
+  width: 1100px;
+  display: grid;
+  gap: 14px;
+  margin: -2px auto 22px;
+}
+
+.assessment-top-row {
+  width: 500px;
+  display: grid;
+  grid-template-columns: 215px 230px;
+  align-items: center;
+  gap: 22px;
+  color: #1f2d32;
+  font-size: 15px;
+}
+
+.assessment-top-row input {
+  height: 38px;
   border: 1px solid #d7e0e3;
-  box-shadow: 0 10px 28px rgba(53, 75, 83, 0.08);
+  border-radius: 4px;
+  padding: 0 12px;
+  background: #fff;
+  color: #24383e;
+  font: inherit;
+}
+
+.assessment-section {
+  width: 1100px;
+  margin: 0 auto;
 }
 
 .assessment-grid {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 18px 24px;
-  border: 1px solid #2e3438;
+  gap: 18px;
+  min-height: 1090px;
+  padding: 14px 18px 28px;
+  border: 2px solid #6b6b6b;
+}
+
+.assessment-required-note {
+  margin: 0 0 12px;
+  color: #1f2d32;
+  font-weight: 600;
 }
 
 .field-row {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.8fr);
+  grid-template-columns: 185px minmax(0, 1fr);
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   color: #26373c;
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.field-row input {
+  max-width: 495px;
+}
+
+.readonly-row {
+  grid-template-columns: 185px minmax(0, 1fr);
+}
+
+.readonly-value {
+  color: #222;
 }
 
 .required {
@@ -657,8 +761,8 @@ button:not(:disabled):hover {
 
 .special-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
-  gap: 8px 18px;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 16px 28px;
 }
 
 .special-options label,
@@ -692,7 +796,7 @@ button:not(:disabled):hover {
 .tabs {
   display: flex;
   gap: 7px;
-  max-width: 980px;
+  max-width: 1100px;
   margin: 0 auto 12px;
   overflow-x: auto;
 }
@@ -840,7 +944,7 @@ button:not(:disabled):hover {
 }
 
 .form-actions {
-  max-width: 980px;
+  max-width: 1100px;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1340,6 +1444,10 @@ button:not(:disabled):hover {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
+  }
+
+  .topbar-brand {
+    transform: none;
   }
 
   .topbar select,

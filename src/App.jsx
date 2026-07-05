@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -37,7 +37,7 @@ const traineeRow = {
 const assessmentFields = [
   { key: 'registerSerial', label: 'রিটার্ন রেজিস্টারের ক্রমিক নম্বর', required: true, value: '417940431464', disabled: true },
   { key: 'registerVolume', label: 'রিটার্ন রেজিস্টারের ভল্যুম নম্বর', required: true, value: '' },
-  { key: 'filingDate', label: 'রিটার্ন দাখিলের তারিখ', required: true, value: '2026-04-02', type: 'date' },
+  { key: 'filingDate', label: 'রিটার্ন দাখিলের তারিখ', required: true, value: '02-04-2026' },
   { key: 'tin', no: '১', label: 'টিআইএন', required: true, value: '417940431464', disabled: true },
   { key: 'taxYear', no: '২', label: 'কর বছর', required: true, value: '2025-2026', disabled: true },
   { key: 'section', no: '৩', label: 'ধারা', required: true, value: '180', disabled: true },
@@ -586,7 +586,7 @@ function App() {
   }
 
   return (
-    <OfficeShell onLogout={logout}>
+    <OfficeShell onLogout={logout} formMode={screen === 'form'}>
       {toast && <Toast type={toast.type} message={toast.message} />}
       {screen === 'dashboard' && (
         <TraineeDashboard
@@ -656,9 +656,9 @@ function LoginScreen({ onLogin, toast }) {
   )
 }
 
-function OfficeShell({ children, onLogout }) {
+function OfficeShell({ children, onLogout, formMode = false }) {
   return (
-    <div className="office-shell">
+    <div className={`office-shell${formMode ? ' form-mode' : ''}`}>
       <aside className="sidebar">
         <div className="sidebar-logo">
           <Logo />
@@ -707,6 +707,8 @@ function Logo() {
 function Topbar() {
   return (
     <header className="topbar">
+      <button type="button" className="topbar-menu-square" aria-label="Menu" />
+      <div className="topbar-brand"><Logo /></div>
       <select defaultValue="2025-2026">
         <option>2025-2026</option>
       </select>
@@ -843,6 +845,9 @@ function FormWorkspace(props) {
           ))}
         </div>
       )}
+      {step === 'Assessment' && (
+        <AssessmentTopFields attempt={attempt} patchAttempt={patchAttempt} />
+      )}
       <div className="form-card pdf-card">
         {step === 'Assessment' && <AssessmentForm attempt={attempt} patchAttempt={patchAttempt} />}
         {step === 'Income and Tax' && (
@@ -877,6 +882,29 @@ function FormWorkspace(props) {
   )
 }
 
+function AssessmentTopFields({ attempt, patchAttempt }) {
+  const setAssessment = (key, value) => {
+    patchAttempt((current) => ({
+      ...current,
+      assessment: { ...current.assessment, [key]: value },
+    }))
+  }
+  return (
+    <div className="assessment-top-fields bangla">
+      {assessmentFields.slice(0, 3).map((field) => (
+        <label key={field.key} className="assessment-top-row">
+          <span>{field.label}{field.required && <b className="required">*</b>}</span>
+          <input
+            disabled={field.disabled}
+            value={attempt.assessment[field.key]}
+            onChange={(event) => setAssessment(field.key, event.target.value)}
+          />
+        </label>
+      ))}
+    </div>
+  )
+}
+
 function AssessmentForm({ attempt, patchAttempt }) {
   const setAssessment = (key, value) => {
     patchAttempt((current) => ({
@@ -886,12 +914,12 @@ function AssessmentForm({ attempt, patchAttempt }) {
   }
 
   return (
-    <div className="stacked-section bangla">
-      <h2 className="bangla-title">Assessment</h2>
+    <div className="assessment-section bangla">
       <div className="assessment-grid">
-        {assessmentFields.map((field) => (
-          <Fragment key={field.key}>
-            <label className="field-row">
+        <p className="assessment-required-note">দয়া করে <b className="required">*</b> চিহ্নিত ঘরসমূহ পূরণ করুন</p>
+        {assessmentFields.slice(3).map((field) => (
+          <div key={field.key}>
+            <label className={`field-row${field.readOnly ? ' readonly-row' : ''}`}>
               <span>{field.no ? `${field.no}। ` : ''}{field.label}{field.required && <b className="required">*</b>}</span>
               {field.type === 'radio' ? (
                 <span className="inline-radios">
@@ -907,6 +935,8 @@ function AssessmentForm({ attempt, patchAttempt }) {
                     </label>
                   ))}
                 </span>
+              ) : field.readOnly ? (
+                <span className="readonly-value">{attempt.assessment[field.key]}</span>
               ) : (
                 <input
                   type={field.type || 'text'}
@@ -938,7 +968,7 @@ function AssessmentForm({ attempt, patchAttempt }) {
                 </div>
               </div>
             )}
-          </Fragment>
+          </div>
         ))}
       </div>
     </div>
