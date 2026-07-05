@@ -2,10 +2,12 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  Clipboard,
   Eye,
   FileText,
   LogOut,
   Menu,
+  Plus,
   Search,
   Send,
   UserRound,
@@ -230,10 +232,11 @@ function emptyEmploymentRecord() {
   )
 }
 
-function createBlankAttempt(userName = '') {
+function createBlankAttempt(userName = '', userCode = '') {
   return {
     id: crypto.randomUUID(),
     userName,
+    userCode,
     createdAt: new Date().toISOString(),
     submittedAt: null,
     status: 'draft',
@@ -286,6 +289,18 @@ function normalizeUserName(userName) {
   return userName.trim().toLowerCase()
 }
 
+function attemptUserKey(attempt) {
+  return attempt.userCode || normalizeUserName(attempt.userName || '')
+}
+
+function createAccessCode(existingUsers) {
+  let code = ''
+  do {
+    code = `TRN-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+  } while (existingUsers[normalizeUserName(code)])
+  return code
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [screen, setScreen] = useState('login')
@@ -294,12 +309,17 @@ function App() {
   const [assetTab, setAssetTab] = useState('Assets Summary')
   const [attempt, setAttempt] = useState(() => createBlankAttempt())
   const [attempts, setAttempts] = useState(() => readAttempts())
+  const [users, setUsers] = useState(() => readUsers())
   const [toast, setToast] = useState(null)
   const [previewAttempt, setPreviewAttempt] = useState(null)
 
   useEffect(() => {
     writeAttempts(attempts)
   }, [attempts])
+
+  useEffect(() => {
+    writeUsers(users)
+  }, [users])
 
   const showToast = (type, message) => {
     setToast({ type, message })
@@ -318,32 +338,35 @@ function App() {
       showToast('error', 'Incorrect password for this username.')
       return
     }
-    if (!trimmedUserName || !password.trim()) {
-      showToast('error', 'Please enter your username and password.')
+    if (!trimmedUserName) {
+      showToast('error', 'Please enter your access code.')
       return
     }
 
-    const users = readUsers()
     const existingUser = users[normalizedUserName]
-    if (existingUser && existingUser.password !== password) {
-      showToast('error', 'Incorrect password for this username.')
+    if (!existingUser) {
+      showToast('error', 'This access code was not created by admin.')
       return
     }
-    if (!existingUser) {
-      writeUsers({
-        ...users,
-        [normalizedUserName]: {
-          userName: trimmedUserName,
-          password,
-          createdAt: new Date().toISOString(),
-        },
-      })
-    }
 
-    const accountName = existingUser?.userName || trimmedUserName
+    const accountName = existingUser.userName || existingUser.code || trimmedUserName
     setSession({ role: 'trainee', userName: accountName, accountKey: normalizedUserName })
-    setAttempt(createBlankAttempt(accountName))
+    setAttempt(createBlankAttempt(accountName, normalizedUserName))
     setScreen('dashboard')
+  }
+
+  const createTraineeUser = () => {
+    const code = createAccessCode(users)
+    const key = normalizeUserName(code)
+    setUsers((current) => ({
+      ...current,
+      [key]: {
+        code,
+        userName: code,
+        createdAt: new Date().toISOString(),
+      },
+    }))
+    showToast('success', `Created access code ${code}.`)
   }
 
   const logout = () => {
@@ -437,7 +460,7 @@ function App() {
     }
     setAttempts((current) => [submitted, ...current])
     showToast('success', 'Return saved. A fresh blank attempt is ready.')
-    setAttempt(createBlankAttempt(session?.userName || ''))
+    setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
     setStep('Assessment')
     setIncomeTab('Income and Tax summary')
     setAssetTab('Assets Summary')
@@ -450,14 +473,20 @@ function App() {
 
   if (screen === 'admin') {
     return (
-      <AdminDashboard
-        attempts={attempts}
-        onLogout={logout}
-        onPreview={(item) => {
-          setPreviewAttempt(item)
-          setScreen('admin-preview')
-        }}
-      />
+      <>
+        {toast && <Toast type={toast.type} message={toast.message} />}
+        <AdminDashboard
+          attempts={attempts}
+          users={users}
+          onCreateUser={createTraineeUser}
+          onLogout={logout}
+          onNotify={showToast}
+          onPreview={(item) => {
+            setPreviewAttempt(item)
+            setScreen('admin-preview')
+          }}
+        />
+      </>
     )
   }
 
@@ -476,7 +505,7 @@ function App() {
         <TraineeDashboard
           userName={session?.userName || ''}
           onEntry={() => {
-            setAttempt(createBlankAttempt(session?.userName || ''))
+            setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
             setStep('Assessment')
             setIncomeTab('Income and Tax summary')
             setAssetTab('Assets Summary')
@@ -509,6 +538,7 @@ function App() {
 function LoginScreen({ onLogin, toast }) {
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
+  const adminMode = normalizeUserName(userName) === ADMIN_USERNAME
 
   return (
     <div className="login-screen">
@@ -522,15 +552,17 @@ function LoginScreen({ onLogin, toast }) {
       >
         <Logo />
         <h1>Welcome!</h1>
-        <p>Sign in to start a practice attempt</p>
+        <p>Enter the access code provided by the admin</p>
         <label>
-          Username
+          Access code
           <input value={userName} onChange={(event) => setUserName(event.target.value)} autoFocus />
         </label>
-        <label>
-          Password
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </label>
+        {adminMode && (
+          <label>
+            Admin password
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          </label>
+        )}
         <button type="submit" className="primary-button">Sign In</button>
       </form>
     </div>
@@ -994,45 +1026,81 @@ function AssetsForm({ attempt, patchAttempt, assetTab }) {
   return <PlainAmountTable title="পরিসম্পদ দায় ও ব্যয় বিবরণী" rows={assetSummaryRows} values={attempt.assets} prefix="asset" patch={(assets) => patchAttempt((current) => ({ ...current, assets }))} />
 }
 
-function AdminDashboard({ attempts, onLogout, onPreview }) {
+function AdminDashboard({ attempts, users, onCreateUser, onLogout, onNotify, onPreview }) {
   const [expandedUsers, setExpandedUsers] = useState({})
   const grouped = attempts.reduce((acc, attempt) => {
-    acc[attempt.userName] = acc[attempt.userName] || []
-    acc[attempt.userName].push(attempt)
+    const key = attemptUserKey(attempt)
+    acc[key] = acc[key] || []
+    acc[key].push(attempt)
     return acc
   }, {})
+  const userRows = Object.entries(users).map(([key, user]) => {
+    const userAttempts = grouped[key] || []
+    return {
+      key,
+      code: user.code || user.userName,
+      createdAt: user.createdAt,
+      attempts: userAttempts,
+      latest: userAttempts[0],
+    }
+  })
+  const orphanAttemptRows = Object.entries(grouped)
+    .filter(([key]) => !users[key])
+    .map(([key, userAttempts]) => ({
+      key,
+      code: userAttempts[0]?.userName || key,
+      createdAt: userAttempts[0]?.createdAt,
+      attempts: userAttempts,
+      latest: userAttempts[0],
+    }))
+  const allUserRows = [...userRows, ...orphanAttemptRows]
+
+  const copyCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      onNotify('success', `Copied ${code}.`)
+    } catch {
+      onNotify('error', 'Copy failed. Select and copy the code manually.')
+    }
+  }
 
   return (
     <div className="admin-screen">
       <header className="admin-header">
         <div>
           <h1>Admin Dashboard</h1>
-          <p>View trainee attempts, marks, and preview submitted entries.</p>
+          <p>Create trainee access codes, monitor attempts, marks, and previews.</p>
         </div>
-        <button type="button" className="secondary-button" onClick={onLogout}>Logout</button>
+        <div className="admin-header-actions">
+          <button type="button" className="success-button" onClick={onCreateUser}><Plus size={16} /> Create trainee</button>
+          <button type="button" className="secondary-button" onClick={onLogout}>Logout</button>
+        </div>
       </header>
       <section className="admin-grid">
-        <div className="admin-card"><strong>{Object.keys(grouped).length}</strong><span>Users</span></div>
+        <div className="admin-card"><strong>{allUserRows.length}</strong><span>Created users</span></div>
         <div className="admin-card"><strong>{attempts.length}</strong><span>Total attempts</span></div>
         <div className="admin-card"><strong>{attempts.length ? Math.round(attempts.reduce((sum, item) => sum + Number(item.score || 0), 0) / attempts.length) : 0}</strong><span>Average mark</span></div>
       </section>
       <table className="data-table admin-table">
-        <thead><tr><th>User</th><th>Attempts</th><th>Latest attempt</th><th>Latest score</th><th>Action</th></tr></thead>
+        <thead><tr><th>Access code</th><th>Attempts</th><th>Latest attempt</th><th>Latest score</th><th>Action</th></tr></thead>
         <tbody>
-          {Object.entries(grouped).flatMap(([userName, userAttempts]) => {
-            const latest = userAttempts[0]
-            const expanded = Boolean(expandedUsers[userName])
+          {allUserRows.length === 0 && (
+            <tr><td colSpan="5" className="empty-cell">No trainee access codes yet. Create one to begin.</td></tr>
+          )}
+          {allUserRows.flatMap(({ key, code, attempts: userAttempts, latest }) => {
+            const expanded = Boolean(expandedUsers[key])
             const userRow = (
-              <tr key={userName}>
-                <td>{userName}</td>
+              <tr key={key}>
+                <td><strong>{code}</strong></td>
                 <td>{userAttempts.length}</td>
-                <td>{new Date(latest.submittedAt || latest.createdAt).toLocaleString()}</td>
-                <td>{latest.score}/100</td>
+                <td>{latest ? new Date(latest.submittedAt || latest.createdAt).toLocaleString() : 'No attempts yet'}</td>
+                <td>{latest ? `${latest.score}/100` : '-'}</td>
                 <td className="admin-actions">
-                  <button type="button" className="row-button" onClick={() => setExpandedUsers((current) => ({ ...current, [userName]: !expanded }))}>
+                  <button type="button" className="row-button" onClick={() => copyCode(code)}><Clipboard size={14} /> Copy</button>
+                  <button type="button" className="row-button" disabled={!userAttempts.length} onClick={() => setExpandedUsers((current) => ({ ...current, [key]: !expanded }))}>
                     {expanded ? 'Hide attempts' : 'View attempts'}
                   </button>
-                  <button type="button" className="row-button" onClick={() => onPreview(latest)}><Eye size={14} /> Latest</button>
+                  <button type="button" className="row-button" disabled={!latest} onClick={() => onPreview(latest)}><Eye size={14} /> Latest</button>
                 </td>
               </tr>
             )

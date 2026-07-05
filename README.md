@@ -6,7 +6,8 @@ This is not connected to the real NBR website. It is a safe practice clone where
 
 ## Current Flow
 
-- Normal users sign in with any name and password.
+- Admin creates trainee access codes from the admin dashboard.
+- Trainees sign in with only their access code. No trainee password is required.
 - The trainee dashboard shows exactly one `NOT_INITIALIZED` PSR row.
 - Clicking `Entry` opens a blank attempt.
 - The form starts at `Assessment`, then moves to `Income and Tax`, then `Assets`.
@@ -19,7 +20,7 @@ This is not connected to the real NBR website. It is a safe practice clone where
   - tax rebate enables `Tax rebate`
 - Number fields are manual. Totals are not automatically calculated.
 - `Save Return` appears on the final living-expenditure page after saving that page.
-- Submitted attempts are stored in localStorage for now, in a shape that can later be moved to Supabase.
+- Created trainee codes and submitted attempts are stored in localStorage for now, in a shape that can later be moved to Supabase.
 
 ## Admin
 
@@ -31,6 +32,8 @@ password: admin2026
 ```
 
 The admin dashboard shows submitted users, attempt counts, placeholder scores, and a preview of each latest attempt. Scoring and mistake detection are deliberately placeholder rules until the final marking criteria are provided.
+
+The admin dashboard can also create and copy trainee access codes. Created users appear even before they submit an attempt.
 
 ## Supabase Note
 
@@ -61,3 +64,4 @@ More context:
 - [Project Explanation](docs/PROJECT_EXPLANATION.md)
 - [Coverage Audit](docs/COVERAGE_AUDIT.md)
 - [Video Transcript and Implementation Brief](docs/VIDEO_TRANSCRIPT_AND_IMPLEMENTATION_BRIEF.md)
+- [Supabase Plan](docs/SUPABASE_PLAN.md)

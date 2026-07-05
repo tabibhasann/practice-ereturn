@@ -994,6 +994,13 @@ button:not(:disabled):hover {
   margin: 0 auto 18px;
 }
 
+.admin-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .admin-header h1 {
   margin: 0;
   font-size: 24px;
@@ -1042,6 +1049,17 @@ button:not(:disabled):hover {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.admin-actions .row-button:disabled {
+  color: #92a0a5;
+  background: #e9eef0;
+  cursor: not-allowed;
+}
+
+.empty-cell {
+  color: #64777f;
+  text-align: center;
 }
 
 .attempt-detail-row td {
