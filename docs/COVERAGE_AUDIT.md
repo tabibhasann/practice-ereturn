@@ -5,8 +5,8 @@ This audit reflects the current implementation after reviewing the new PDFs in `
 ## Confirmed In The App
 
 1. Office shell with `eReturn OFFICE`, sidebar items, assessment-year selector, search, `Third Party User 1`, and avatar.
-2. Admin-created trainee access codes.
-3. Trainee login with only an access code and no trainee password.
+2. Admin-created trainee usernames.
+3. Trainee login with only a username and no trainee password.
 4. Admin login using `admin / admin2026`.
 4. Trainee dashboard with only one row and initial status `NOT_INITIALIZED`.
 5. `Entry` starts a fresh blank attempt.
@@ -42,12 +42,12 @@ This audit reflects the current implementation after reviewing the new PDFs in `
 24. Assets Summary rows from PDF 7.
 25. Living Expenditure rows from PDFs 8-9.
 26. Final `Save Return` unlocks only after saving `Living Expenditure`.
-27. Submitted attempt is saved locally under the trainee access code and the trainee returns to the one-row dashboard.
-28. Admin dashboard lists created access codes, users with zero attempts, attempt counts, latest submission, score, and preview.
+27. Submitted attempt is saved under the trainee username and the trainee returns to the one-row dashboard.
+28. Admin dashboard lists created usernames, users with zero attempts, attempt counts, latest submission, score, and preview.
 
 ## Placeholder Or Future Work
 
-- Supabase is not connected yet. Access codes and attempts are currently stored in localStorage.
+- Supabase is connected for the current local environment. If Supabase env vars are missing, the app falls back to localStorage.
 - Scoring and mistake detection are placeholder rules until final marking criteria are provided.
 - The admin preview summarizes the attempt; it is not yet a full PDF-style return renderer.
 - Exact pixel-perfect matching may still need small spacing/color tweaks after stakeholder review, but the field coverage and interaction logic are in place.

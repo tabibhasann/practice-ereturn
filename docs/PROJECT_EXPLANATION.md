@@ -4,7 +4,7 @@
 
 This project is a practice website for an NBR eReturn Office-style data-entry workflow. The real website already exists; this local app is meant to let trainees practice the same screens and form behavior before entering data into the real system.
 
-The app currently uses browser localStorage as a stand-in database. It is structured so the same saved attempt objects can later be written to Supabase.
+The app now uses Supabase for admin-created trainee usernames and submitted attempts when the local Supabase environment variables are configured. It keeps a localStorage fallback only for offline/local demos without Supabase env vars.
 
 ## What The Video And PDFs Show
 
@@ -12,18 +12,19 @@ The supplied PDFs show the target form screens for `Income and Tax` and `Assets`
 
 The important workflow is:
 
-1. A trainee signs in.
-2. The office dashboard shows one PSR detail row with status `NOT_INITIALIZED`.
-3. The trainee clicks `Entry`.
-4. The form opens on `Assessment`.
-5. Required red-star fields must be filled before draft save.
-6. `Income and Tax` starts with only `Income and Tax summary`.
-7. Extra income tabs only appear when their source checkbox is selected.
-8. Every amount field is manual, including total rows.
-9. The trainee saves drafts page by page.
-10. The final `Assets > Living Expenditure` page unlocks `Save Return`.
-11. Saving the return submits the attempt, resets the trainee to the dashboard, and prepares a blank next attempt.
-12. The admin can later review submitted attempts.
+1. Admin creates a unique trainee username.
+2. A trainee signs in with that username only.
+3. The office dashboard shows one PSR detail row with status `NOT_INITIALIZED`.
+4. The trainee clicks `Entry`.
+5. The form opens on `Assessment`.
+6. Required red-star fields must be filled before draft save.
+7. `Income and Tax` starts with only `Income and Tax summary`.
+8. Extra income tabs only appear when their source checkbox is selected.
+9. Every amount field is manual, including total rows.
+10. The trainee saves drafts page by page.
+11. The final `Assets > Living Expenditure` page unlocks `Save Return`.
+12. Saving the return submits the attempt to Supabase, resets the trainee to the dashboard, and prepares a blank next attempt.
+13. The admin can later review submitted attempts.
 
 ## Assessment
 
@@ -77,6 +78,7 @@ admin / admin2026
 
 The admin can see:
 
+- usernames created by admin, including users with zero attempts
 - users who submitted attempts
 - number of attempts per user
 - latest attempt time

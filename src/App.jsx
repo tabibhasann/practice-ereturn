@@ -13,6 +13,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import './App.css'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
 
 const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = 'admin2026'
@@ -293,12 +294,36 @@ function attemptUserKey(attempt) {
   return attempt.userCode || normalizeUserName(attempt.userName || '')
 }
 
-function createAccessCode(existingUsers) {
-  let code = ''
+function createUsername(existingUsers) {
+  let username = ''
   do {
-    code = `TRN-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-  } while (existingUsers[normalizeUserName(code)])
-  return code
+    username = `USR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+  } while (existingUsers[normalizeUserName(username)])
+  return username
+}
+
+function userRowsToMap(rows = []) {
+  return Object.fromEntries(rows.map((row) => [normalizeUserName(row.username), {
+    id: row.id,
+    username: row.username,
+    userName: row.display_name || row.username,
+    createdAt: row.created_at,
+    disabledAt: row.disabled_at,
+  }]))
+}
+
+function attemptRowToAttempt(row) {
+  const payload = row.payload || {}
+  return {
+    ...payload,
+    id: row.id,
+    userName: payload.userName || row.username,
+    userCode: normalizeUserName(row.username),
+    submittedAt: row.submitted_at,
+    score: row.score,
+    mistakes: row.mistakes || payload.mistakes || [],
+    status: payload.status || 'submitted',
+  }
 }
 
 function App() {
@@ -310,21 +335,50 @@ function App() {
   const [attempt, setAttempt] = useState(() => createBlankAttempt())
   const [attempts, setAttempts] = useState(() => readAttempts())
   const [users, setUsers] = useState(() => readUsers())
+  const [dataLoading, setDataLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [previewAttempt, setPreviewAttempt] = useState(null)
-
-  useEffect(() => {
-    writeAttempts(attempts)
-  }, [attempts])
-
-  useEffect(() => {
-    writeUsers(users)
-  }, [users])
 
   const showToast = (type, message) => {
     setToast({ type, message })
     window.setTimeout(() => setToast(null), 2400)
   }
+
+  useEffect(() => {
+    if (isSupabaseConfigured) return
+    writeAttempts(attempts)
+  }, [attempts])
+
+  useEffect(() => {
+    if (isSupabaseConfigured) return
+    writeUsers(users)
+  }, [users])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let cancelled = false
+    const loadSupabaseData = async () => {
+      setDataLoading(true)
+      const [usersResult, attemptsResult] = await Promise.all([
+        supabase.from('trainee_users').select('*').order('created_at', { ascending: false }),
+        supabase.from('return_attempts').select('*').order('submitted_at', { ascending: false }),
+      ])
+
+      if (cancelled) return
+      if (usersResult.error || attemptsResult.error) {
+        showToast('error', usersResult.error?.message || attemptsResult.error?.message || 'Could not load Supabase data.')
+      } else {
+        setUsers(userRowsToMap(usersResult.data || []))
+        setAttempts((attemptsResult.data || []).map(attemptRowToAttempt))
+      }
+      setDataLoading(false)
+    }
+
+    loadSupabaseData()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const login = ({ userName, password }) => {
     const trimmedUserName = userName.trim()
@@ -339,34 +393,56 @@ function App() {
       return
     }
     if (!trimmedUserName) {
-      showToast('error', 'Please enter your access code.')
+      showToast('error', 'Please enter your username.')
       return
     }
 
     const existingUser = users[normalizedUserName]
     if (!existingUser) {
-      showToast('error', 'This access code was not created by admin.')
+      showToast('error', 'This username was not created by admin.')
+      return
+    }
+    if (existingUser.disabledAt) {
+      showToast('error', 'This username is disabled.')
       return
     }
 
-    const accountName = existingUser.userName || existingUser.code || trimmedUserName
+    const accountName = existingUser.userName || existingUser.username || trimmedUserName
     setSession({ role: 'trainee', userName: accountName, accountKey: normalizedUserName })
     setAttempt(createBlankAttempt(accountName, normalizedUserName))
     setScreen('dashboard')
   }
 
-  const createTraineeUser = () => {
-    const code = createAccessCode(users)
-    const key = normalizeUserName(code)
+  const createTraineeUser = async () => {
+    const username = createUsername(users)
+    const key = normalizeUserName(username)
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('trainee_users')
+        .insert({ username, display_name: username })
+        .select('*')
+        .single()
+
+      if (error) {
+        showToast('error', error.message)
+        return
+      }
+
+      setUsers((current) => ({ ...userRowsToMap([data]), ...current }))
+      showToast('success', `Created username ${username}.`)
+      return
+    }
+
     setUsers((current) => ({
-      ...current,
       [key]: {
-        code,
-        userName: code,
+        username,
+        userName: username,
         createdAt: new Date().toISOString(),
       },
+      ...current,
     }))
-    showToast('success', `Created access code ${code}.`)
+    showToast('success', `Created username ${username}.`)
   }
 
   const logout = () => {
@@ -445,7 +521,7 @@ function App() {
     }
   }
 
-  const saveReturn = () => {
+  const saveReturn = async () => {
     const error = validateCurrent()
     if (error) {
       showToast('error', error)
@@ -458,7 +534,28 @@ function App() {
       score: scoreAttempt(attempt),
       mistakes: buildPlaceholderMistakes(attempt),
     }
-    setAttempts((current) => [submitted, ...current])
+    if (isSupabaseConfigured) {
+      const currentUser = users[session?.accountKey || '']
+      const { data, error } = await supabase
+        .from('return_attempts')
+        .insert({
+          trainee_user_id: currentUser?.id || null,
+          username: currentUser?.username || session?.userName || submitted.userName,
+          score: submitted.score,
+          mistakes: submitted.mistakes,
+          payload: submitted,
+        })
+        .select('*')
+        .single()
+
+      if (error) {
+        showToast('error', error.message)
+        return
+      }
+      setAttempts((current) => [attemptRowToAttempt(data), ...current])
+    } else {
+      setAttempts((current) => [submitted, ...current])
+    }
     showToast('success', 'Return saved. A fresh blank attempt is ready.')
     setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
     setStep('Assessment')
@@ -476,8 +573,9 @@ function App() {
       <>
         {toast && <Toast type={toast.type} message={toast.message} />}
         <AdminDashboard
-          attempts={attempts}
-          users={users}
+        attempts={attempts}
+        users={users}
+        dataLoading={dataLoading}
           onCreateUser={createTraineeUser}
           onLogout={logout}
           onNotify={showToast}
@@ -552,9 +650,9 @@ function LoginScreen({ onLogin, toast }) {
       >
         <Logo />
         <h1>Welcome!</h1>
-        <p>Enter the access code provided by the admin</p>
+        <p>Enter the username provided by the admin</p>
         <label>
-          Access code
+          Username
           <input value={userName} onChange={(event) => setUserName(event.target.value)} autoFocus />
         </label>
         {adminMode && (
@@ -1006,7 +1104,7 @@ function PlainAmountTable({ title, rows, values, prefix, patch }) {
           {rows.map((row, index) => {
             const key = `${prefix}${index}`
             return (
-              <tr key={row}>
+              <tr key={key}>
                 <td>{index + 1}।</td>
                 <td>{row}</td>
                 <td><input value={values[key]} onChange={(event) => patch({ ...values, [key]: event.target.value })} /></td>
@@ -1026,7 +1124,7 @@ function AssetsForm({ attempt, patchAttempt, assetTab }) {
   return <PlainAmountTable title="পরিসম্পদ দায় ও ব্যয় বিবরণী" rows={assetSummaryRows} values={attempt.assets} prefix="asset" patch={(assets) => patchAttempt((current) => ({ ...current, assets }))} />
 }
 
-function AdminDashboard({ attempts, users, onCreateUser, onLogout, onNotify, onPreview }) {
+function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, onNotify, onPreview }) {
   const [expandedUsers, setExpandedUsers] = useState({})
   const grouped = attempts.reduce((acc, attempt) => {
     const key = attemptUserKey(attempt)
@@ -1038,7 +1136,7 @@ function AdminDashboard({ attempts, users, onCreateUser, onLogout, onNotify, onP
     const userAttempts = grouped[key] || []
     return {
       key,
-      code: user.code || user.userName,
+      username: user.username || user.userName,
       createdAt: user.createdAt,
       attempts: userAttempts,
       latest: userAttempts[0],
@@ -1048,19 +1146,19 @@ function AdminDashboard({ attempts, users, onCreateUser, onLogout, onNotify, onP
     .filter(([key]) => !users[key])
     .map(([key, userAttempts]) => ({
       key,
-      code: userAttempts[0]?.userName || key,
+      username: userAttempts[0]?.userName || key,
       createdAt: userAttempts[0]?.createdAt,
       attempts: userAttempts,
       latest: userAttempts[0],
     }))
   const allUserRows = [...userRows, ...orphanAttemptRows]
 
-  const copyCode = async (code) => {
+  const copyUsername = async (username) => {
     try {
-      await navigator.clipboard.writeText(code)
-      onNotify('success', `Copied ${code}.`)
+      await navigator.clipboard.writeText(username)
+      onNotify('success', `Copied ${username}.`)
     } catch {
-      onNotify('error', 'Copy failed. Select and copy the code manually.')
+      onNotify('error', 'Copy failed. Select and copy the username manually.')
     }
   }
 
@@ -1069,7 +1167,7 @@ function AdminDashboard({ attempts, users, onCreateUser, onLogout, onNotify, onP
       <header className="admin-header">
         <div>
           <h1>Admin Dashboard</h1>
-          <p>Create trainee access codes, monitor attempts, marks, and previews.</p>
+          <p>Create trainee usernames, monitor attempts, marks, and previews.</p>
         </div>
         <div className="admin-header-actions">
           <button type="button" className="success-button" onClick={onCreateUser}><Plus size={16} /> Create trainee</button>
@@ -1082,21 +1180,24 @@ function AdminDashboard({ attempts, users, onCreateUser, onLogout, onNotify, onP
         <div className="admin-card"><strong>{attempts.length ? Math.round(attempts.reduce((sum, item) => sum + Number(item.score || 0), 0) / attempts.length) : 0}</strong><span>Average mark</span></div>
       </section>
       <table className="data-table admin-table">
-        <thead><tr><th>Access code</th><th>Attempts</th><th>Latest attempt</th><th>Latest score</th><th>Action</th></tr></thead>
+        <thead><tr><th>Username</th><th>Attempts</th><th>Latest attempt</th><th>Latest score</th><th>Action</th></tr></thead>
         <tbody>
-          {allUserRows.length === 0 && (
-            <tr><td colSpan="5" className="empty-cell">No trainee access codes yet. Create one to begin.</td></tr>
+          {dataLoading && (
+            <tr><td colSpan="5" className="empty-cell">Loading Supabase data...</td></tr>
           )}
-          {allUserRows.flatMap(({ key, code, attempts: userAttempts, latest }) => {
+          {!dataLoading && allUserRows.length === 0 && (
+            <tr><td colSpan="5" className="empty-cell">No trainee usernames yet. Create one to begin.</td></tr>
+          )}
+          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest }) => {
             const expanded = Boolean(expandedUsers[key])
             const userRow = (
               <tr key={key}>
-                <td><strong>{code}</strong></td>
+                <td><strong>{username}</strong></td>
                 <td>{userAttempts.length}</td>
                 <td>{latest ? new Date(latest.submittedAt || latest.createdAt).toLocaleString() : 'No attempts yet'}</td>
                 <td>{latest ? `${latest.score}/100` : '-'}</td>
                 <td className="admin-actions">
-                  <button type="button" className="row-button" onClick={() => copyCode(code)}><Clipboard size={14} /> Copy</button>
+                  <button type="button" className="row-button" onClick={() => copyUsername(username)}><Clipboard size={14} /> Copy</button>
                   <button type="button" className="row-button" disabled={!userAttempts.length} onClick={() => setExpandedUsers((current) => ({ ...current, [key]: !expanded }))}>
                     {expanded ? 'Hide attempts' : 'View attempts'}
                   </button>

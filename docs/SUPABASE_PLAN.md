@@ -1,54 +1,73 @@
-# Supabase Plan
+# Supabase Setup
 
-Supabase is not connected in the current app. The current implementation stores data in `localStorage`, which is only suitable for local demo/testing.
+Supabase project created for this app:
 
-## Required Tables
+```text
+project_id: mgkiqmupnjazaegqwpqy
+url: https://mgkiqmupnjazaegqwpqy.supabase.co
+region: ap-southeast-1
+```
+
+Local environment file:
+
+```text
+.env.local
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+```
+
+`.env.local` is intentionally not committed.
+
+## Tables Created
 
 ### trainee_users
 
-Stores admin-created trainee access codes.
+Stores admin-created trainee usernames.
 
-```sql
-create table trainee_users (
-  id uuid primary key default gen_random_uuid(),
-  access_code text unique not null,
-  display_name text,
-  created_at timestamptz not null default now(),
-  disabled_at timestamptz
-);
-```
+Columns:
+
+- `id`
+- `username`
+- `display_name`
+- `created_at`
+- `disabled_at`
 
 ### return_attempts
 
-Stores each submitted attempt.
+Stores every submitted attempt.
 
-```sql
-create table return_attempts (
-  id uuid primary key default gen_random_uuid(),
-  trainee_user_id uuid references trainee_users(id),
-  access_code text not null,
-  submitted_at timestamptz not null default now(),
-  score numeric,
-  mistakes jsonb not null default '[]'::jsonb,
-  payload jsonb not null
-);
-```
+Columns:
 
-## Required App Changes
+- `id`
+- `trainee_user_id`
+- `username`
+- `submitted_at`
+- `score`
+- `mistakes`
+- `payload`
 
-1. Replace `readUsers` / `writeUsers` with Supabase reads/writes to `trainee_users`.
-2. Replace `readAttempts` / `writeAttempts` with Supabase reads/writes to `return_attempts`.
-3. On trainee login, look up `access_code`; allow login only if the code exists and is not disabled.
-4. On save return, insert one row into `return_attempts` with the full attempt payload.
-5. Admin dashboard should query all `trainee_users` and their attempts.
+## Current Behavior
 
-## What I Need To Connect It
+- Admin creates a unique username such as `USR-ABC123`.
+- Trainee logs in with that username only.
+- Unknown usernames are blocked.
+- Submitted attempts are inserted into Supabase.
+- Admin dashboard reads usernames and attempts from Supabase.
+- If Supabase env vars are missing, the app falls back to localStorage for local demo use.
 
-- Supabase project URL.
-- Supabase anon key for the frontend.
-- Confirmation whether this will be hosted publicly or only used locally.
-- Final admin auth approach: keep the current hardcoded admin for demo, or move admin login to Supabase Auth.
+## Security Note
 
-## Storage Estimate
+This is currently a frontend-only Supabase integration. To make the demo work from the browser, the public anon role can read/create trainee usernames and read/insert attempts through RLS policies.
 
-For about 500 attempts with JSON-only form payloads, expected database usage is small, usually a few MB. If screenshots, PDFs, or attachments are saved later, those should use Supabase Storage and will increase usage separately.
+Before using this as a real public exam system, harden it with one of these:
+
+- Supabase Auth for admin and restricted admin-only username creation.
+- Edge Functions for admin-only create-user and review-attempt operations.
+- Tighter RLS policies so trainees can only submit under their own assigned username and cannot read all attempts.
+
+## Remaining Product Work
+
+- Final scoring rules.
+- Detailed mistake detection.
+- Full official-style preview if required by examiners.
+- Production-grade admin authentication.

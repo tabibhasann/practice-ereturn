@@ -39,4 +39,4 @@ When a trainee saves the return, the attempt should be logged for admin review a
 - Required fields block draft save and show a red toast.
 - Successful saves show a green toast and unlock next navigation.
 - Admin credential is `admin / admin2026`.
-- Attempts are stored in localStorage until Supabase is connected.
+- Admin-created usernames and submitted attempts are stored in Supabase when the local Supabase env vars are configured.
