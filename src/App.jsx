@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
-  Clipboard,
   Eye,
   FileText,
   LogOut,
@@ -607,15 +606,15 @@ function App() {
   }
 
   if (screen === 'admin-preview' && previewAttempt) {
-    return <AttemptPreview attempt={previewAttempt} onBack={() => setScreen('admin')} admin />
+    return <AttemptPreview attempt={previewAttempt} onBack={() => setScreen('admin')} onNotify={showToast} admin />
   }
 
   if (screen === 'preview') {
-    return <AttemptPreview attempt={attempt} onBack={() => setScreen('form')} />
+    return <AttemptPreview attempt={attempt} onBack={() => setScreen('form')} onNotify={showToast} />
   }
 
   return (
-    <OfficeShell onLogout={logout} formMode={screen === 'form'}>
+    <OfficeShell onLogout={logout} userName={session?.userName || ''} formMode={screen === 'form'}>
       {toast && <Toast type={toast.type} message={toast.message} />}
       {screen === 'dashboard' && (
         <TraineeDashboard
@@ -686,7 +685,7 @@ function LoginScreen({ onLogin, toast }) {
   )
 }
 
-function OfficeShell({ children, onLogout, formMode = false }) {
+function OfficeShell({ children, onLogout, userName = '', formMode = false }) {
   return (
     <div className={`office-shell${formMode ? ' form-mode' : ''}`}>
       <aside className="sidebar">
@@ -716,7 +715,7 @@ function OfficeShell({ children, onLogout, formMode = false }) {
         </button>
       </aside>
       <main className="workspace">
-        <Topbar />
+        <Topbar userName={userName} />
         {children}
         <Footer />
       </main>
@@ -734,7 +733,7 @@ function Logo() {
   )
 }
 
-function Topbar() {
+function Topbar({ userName }) {
   return (
     <header className="topbar">
       <button type="button" className="topbar-menu-square" aria-label="Menu" />
@@ -746,7 +745,7 @@ function Topbar() {
         <input placeholder="Search" />
         <button type="button" aria-label="Search"><Search size={20} /></button>
       </div>
-      <a className="user-label">Third Party User 1</a>
+      <a className="user-label">{userName || 'Third Party User 1'}</a>
       <div className="avatar"><UserRound size={24} /></div>
     </header>
   )
@@ -1332,12 +1331,15 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
             const expanded = Boolean(expandedUsers[key])
             const userRow = (
               <tr key={key}>
-                <td><strong>{username}</strong></td>
+                <td>
+                  <button type="button" className="copy-username" title="Copy username" onClick={() => copyUsername(username)}>
+                    {username}
+                  </button>
+                </td>
                 <td>{userAttempts.length}</td>
                 <td>{latest ? new Date(latest.submittedAt || latest.createdAt).toLocaleString() : 'No attempts yet'}</td>
                 <td>{latest ? `${latest.score}/100` : '-'}</td>
                 <td className="admin-actions">
-                  <button type="button" className="row-button" onClick={() => copyUsername(username)}><Clipboard size={14} /> Copy</button>
                   <button type="button" className="row-button" disabled={!userAttempts.length} onClick={() => setExpandedUsers((current) => ({ ...current, [key]: !expanded }))}>
                     {expanded ? 'Hide attempts' : 'View attempts'}
                   </button>
@@ -1364,18 +1366,30 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
   )
 }
 
-function AttemptPreview({ attempt, onBack, admin = false }) {
+function AttemptPreview({ attempt, onBack, onNotify, admin = false }) {
+  const noopPatch = () => {}
+  const copyId = async () => {
+    try {
+      await navigator.clipboard.writeText(attempt.userName || attempt.userCode || '')
+      onNotify?.('success', 'Username copied.')
+    } catch {
+      onNotify?.('error', 'Copy failed.')
+    }
+  }
   return (
     <div className="preview-screen">
       <div className="preview-toolbar">
         <button type="button" onClick={onBack}><ChevronLeft size={18} /> Back</button>
       </div>
-      <article className="return-page">
+      <article className="return-page full-preview-page">
         <div className="return-header">
           <FileText size={42} />
           <div>
             <h1>Attempt Preview</h1>
-            <p>{attempt.userName} - {attempt.status}</p>
+            <p>
+              <button type="button" className="copy-username inline-copy" onClick={copyId}>{attempt.userName}</button>
+              {' '} - {attempt.status}
+            </p>
           </div>
           <strong>{admin ? `Score ${attempt.score}/100` : 'Practice Draft'}</strong>
         </div>
@@ -1385,15 +1399,44 @@ function AttemptPreview({ attempt, onBack, admin = false }) {
             {(attempt.mistakes?.length ? attempt.mistakes : buildPlaceholderMistakes(attempt)).map((mistake) => <li key={mistake}>{mistake}</li>)}
           </ul>
         </section>
-        <table>
-          <tbody>
-            <tr><th>Name</th><td>{attempt.assessment.name || attempt.userName}</td><th>TIN</th><td>{attempt.assessment.tin}</td></tr>
-            <tr><th>Income total</th><td>{attempt.incomeAmounts.totalIncome}</td><th>Total payable tax</th><td>{attempt.tax.totalPayableTax}</td></tr>
-            <tr><th>Income tabs opened</th><td colSpan="3">{Object.entries(attempt.incomeChecked).filter(([, value]) => value).map(([key]) => key).join(', ') || 'None'}</td></tr>
-          </tbody>
-        </table>
+        <div className="preview-form-pages">
+          <PreviewBlock title="Assessment">
+            <AssessmentTopFields attempt={attempt} patchAttempt={noopPatch} />
+            <AssessmentForm attempt={attempt} patchAttempt={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Income and Tax summary">
+            <IncomeSummary attempt={attempt} patchAttempt={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Income from employment">
+            <EmploymentSchedule attempt={attempt} patchAttempt={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Income from rent">
+            <RentSchedule attempt={attempt} patchAttempt={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Income from financial assets">
+            <PlainAmountTable title="আর্থিক পরিসম্পদ হইতে আয়:" rows={financialRows} values={attempt.financial} prefix="financial" patch={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Tax rebate">
+            <PlainAmountTable title="কর রেয়াতের জন্য প্রযোজ্য বিনিয়োগ বিবরণী:" rows={rebateRows} values={attempt.rebate} prefix="rebate" patch={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Assets Summary">
+            <AssetsSummary attempt={attempt} patchAttempt={noopPatch} />
+          </PreviewBlock>
+          <PreviewBlock title="Living Expenditure">
+            <PlainAmountTable title="জীবনযাপন সংশ্লিষ্ট ব্যয়ের বিবরণী" rows={livingRows} values={attempt.living} prefix="living" patch={noopPatch} />
+          </PreviewBlock>
+        </div>
       </article>
     </div>
+  )
+}
+
+function PreviewBlock({ title, children }) {
+  return (
+    <section className="preview-block">
+      <h2>{title}</h2>
+      {children}
+    </section>
   )
 }
 

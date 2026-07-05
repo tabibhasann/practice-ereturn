@@ -268,12 +268,8 @@ button:not(:disabled):hover {
 }
 
 .office-shell.form-mode {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: 242px minmax(0, 1fr);
   background: #fff;
-}
-
-.office-shell.form-mode .sidebar {
-  display: none;
 }
 
 .sidebar {
@@ -359,8 +355,13 @@ button:not(:disabled):hover {
 
 .form-mode .topbar {
   height: 54px;
-  grid-template-columns: 48px 1fr 128px 300px auto 36px;
+  grid-template-columns: 1fr 128px 300px auto 36px;
   background: #fff;
+}
+
+.form-mode .topbar-menu-square,
+.form-mode .topbar-brand {
+  display: none;
 }
 
 .topbar-menu-square {
@@ -373,7 +374,7 @@ button:not(:disabled):hover {
 
 .topbar-brand {
   justify-self: center;
-  transform: translateX(270px);
+  transform: translateX(120px);
 }
 
 .topbar-brand .brand span {
@@ -414,7 +415,10 @@ button:not(:disabled):hover {
 
 .user-label {
   color: #5b7781;
-  font-size: 15px;
+  font-size: 19px;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .avatar {
@@ -555,6 +559,25 @@ button:not(:disabled):hover {
 
 .form-mode .workspace {
   background: #fff;
+  overflow-x: auto;
+}
+
+.form-mode .form-space {
+  padding: 52px 18px 80px;
+}
+
+.form-mode .stepper,
+.form-mode .tabs,
+.form-mode .form-card,
+.form-mode .form-actions,
+.form-mode .assessment-top-fields,
+.form-mode .assessment-section {
+  max-width: 980px;
+}
+
+.form-mode .assessment-top-fields,
+.form-mode .assessment-section {
+  width: 980px;
 }
 
 .form-mode .app-footer {
@@ -895,12 +918,13 @@ button:not(:disabled):hover {
   padding: 6px 10px;
 }
 
-.rent-property-cell {
+.rent-table .rent-property-cell {
   vertical-align: top;
 }
 
 .rent-property-cell textarea {
   min-height: 145px;
+  display: block;
   margin-top: 4px;
 }
 
@@ -1234,6 +1258,8 @@ button:not(:disabled):hover {
 
 .admin-table {
   max-width: 1100px;
+  border: 1px solid #d3e0e4;
+  box-shadow: 0 8px 28px rgba(38, 67, 78, 0.08);
 }
 
 .admin-table .row-button {
@@ -1252,6 +1278,26 @@ button:not(:disabled):hover {
   color: #92a0a5;
   background: #e9eef0;
   cursor: not-allowed;
+}
+
+.copy-username {
+  border: 0;
+  padding: 0;
+  color: #087aa4;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.copy-username:hover {
+  color: #064f6d;
+}
+
+.inline-copy {
+  display: inline;
 }
 
 .empty-cell {
@@ -1324,13 +1370,48 @@ button:not(:disabled):hover {
 }
 
 .return-page {
-  max-width: 1000px;
+  max-width: 1100px;
   min-height: 720px;
   margin: 0 auto;
   padding: 46px 56px;
   background: white;
   border-top: 12px solid #c91818;
   box-shadow: 0 12px 54px rgba(31, 50, 58, 0.2);
+}
+
+.full-preview-page {
+  border-top-color: #17a682;
+}
+
+.preview-form-pages {
+  display: grid;
+  gap: 34px;
+}
+
+.preview-block {
+  padding-top: 24px;
+  border-top: 1px solid #d8e4e8;
+}
+
+.preview-block > h2 {
+  margin: 0 0 16px;
+  color: #16333d;
+  font-size: 18px;
+}
+
+.preview-block .assessment-top-fields,
+.preview-block .assessment-section,
+.preview-block .asset-statement {
+  width: 100%;
+}
+
+.preview-block .assessment-grid {
+  min-height: 0;
+}
+
+.preview-block .form-table,
+.preview-block .rent-table {
+  max-width: 100%;
 }
 
 .excel-page {
