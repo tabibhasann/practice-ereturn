@@ -1195,6 +1195,106 @@ button:not(:disabled):hover {
   font-size: 13px;
 }
 
+.attempt-summary {
+  max-width: 1060px;
+  display: grid;
+  grid-template-columns: minmax(170px, auto) minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin: 0 auto 14px;
+  padding: 14px 16px;
+  border: 1px solid #bed9d4;
+  border-left: 4px solid #159275;
+  background: rgba(247, 252, 251, 0.94);
+}
+
+.attempt-summary.limit-reached {
+  border-color: #dfc5c2;
+  border-left-color: #b84a40;
+  background: #fff9f8;
+}
+
+.attempt-summary-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.attempt-summary-copy span {
+  color: #6b7e84;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.attempt-summary-copy strong {
+  color: #24434c;
+  font-size: 16px;
+}
+
+.attempt-summary p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #5b7178;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.attempt-meter {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(28px, 1fr));
+  gap: 6px;
+}
+
+.attempt-slot {
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #bfd0d4;
+  color: #60777e;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.attempt-slot.used {
+  border-color: #159275;
+  color: #fff;
+  background: #159275;
+}
+
+.attempt-meter.compact {
+  width: 112px;
+  grid-template-columns: repeat(7, 12px);
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.attempt-meter.compact .attempt-slot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  font-size: 0;
+}
+
+.attempt-count-label {
+  color: #324d56;
+  font-weight: 700;
+}
+
+.status-pill.muted.locked {
+  color: #9c3b34;
+  background: #f8e3e1;
+}
+
+.data-table .row-button:disabled {
+  color: #7e8d92;
+  background: #dfe7e9;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .center-note {
   margin: -5px 0 5px;
   text-align: center;
@@ -1662,6 +1762,15 @@ button:not(:disabled):hover {
   .filter-panel {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .attempt-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .attempt-summary p {
+    white-space: normal;
   }
 
   .filter-panel label,

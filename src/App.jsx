@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   Eye,
   FileText,
+  Lock,
   LogOut,
   Menu,
   Plus,
@@ -16,6 +18,7 @@ import './App.css'
 import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 
 const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
+const MAX_ATTEMPTS = 7
 const ATTEMPTS_KEY = 'practice-ereturn-attempts'
 const USERS_KEY = 'practice-ereturn-users'
 
@@ -308,6 +311,7 @@ function userRowsToMap(rows = []) {
     userName: row.display_name || row.username,
     createdAt: row.created_at,
     disabledAt: row.disabled_at,
+    attemptLimit: Number(row.attempt_limit || MAX_ATTEMPTS),
   }]))
 }
 
@@ -391,6 +395,7 @@ function App() {
       try {
         const data = await callSupabaseFunction('trainee-login', { username: trimmedUserName })
         existingUser = userRowsToMap([data.user])[normalizeUserName(data.user.username)]
+        existingUser.attemptCount = Number(data.attemptCount || 0)
         setUsers((current) => ({ ...current, [normalizeUserName(data.user.username)]: existingUser }))
       } catch (error) {
         showToast('error', error.message || 'This username was not created by admin.')
@@ -407,7 +412,14 @@ function App() {
     }
 
     const accountName = existingUser.userName || existingUser.username || trimmedUserName
-    setSession({ role: 'trainee', userName: accountName, accountKey: normalizedUserName })
+    const localAttemptCount = attempts.filter((item) => attemptUserKey(item) === normalizedUserName).length
+    setSession({
+      role: 'trainee',
+      userName: accountName,
+      accountKey: normalizedUserName,
+      attemptCount: isSupabaseConfigured ? Number(existingUser.attemptCount || 0) : localAttemptCount,
+      attemptLimit: Number(existingUser.attemptLimit || MAX_ATTEMPTS),
+    })
     setAttempt(createBlankAttempt(accountName, normalizedUserName))
     setScreen('dashboard')
   }
@@ -534,6 +546,11 @@ function App() {
   }
 
   const saveReturn = async () => {
+    if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || MAX_ATTEMPTS)) {
+      showToast('error', 'You have used all 7 attempts. No further returns can be submitted.')
+      setScreen('dashboard')
+      return
+    }
     const error = validateCurrent()
     if (error) {
       showToast('error', error)
@@ -560,6 +577,8 @@ function App() {
       score: scoreAttempt(attempt),
       mistakes: buildPlaceholderMistakes(attempt),
     }
+    let savedAttemptCount = Number(session?.attemptCount || 0) + 1
+    let savedAttemptLimit = Number(session?.attemptLimit || MAX_ATTEMPTS)
     if (isSupabaseConfigured) {
       try {
         const data = await callSupabaseFunction('submit-attempt', {
@@ -567,14 +586,35 @@ function App() {
           attempt: submitted,
         })
         setAttempts((current) => [attemptRowToAttempt(data.attempt), ...current])
+        savedAttemptCount = Number(data.attemptCount || savedAttemptCount)
+        savedAttemptLimit = Number(data.attemptLimit || savedAttemptLimit)
+        setSession((current) => ({
+          ...current,
+          attemptCount: savedAttemptCount,
+          attemptLimit: savedAttemptLimit,
+        }))
       } catch (error) {
         showToast('error', error.message)
+        if (error.message?.includes('used all')) {
+          setSession((current) => ({
+            ...current,
+            attemptCount: Number(current?.attemptLimit || MAX_ATTEMPTS),
+          }))
+          setScreen('dashboard')
+        }
         return
       }
     } else {
       setAttempts((current) => [submitted, ...current])
+      setSession((current) => ({ ...current, attemptCount: Number(current?.attemptCount || 0) + 1 }))
     }
-    showToast('success', 'Return saved. A fresh blank attempt is ready.')
+    const remainingAttempts = Math.max(savedAttemptLimit - savedAttemptCount, 0)
+    showToast(
+      'success',
+      remainingAttempts
+        ? `Return saved. ${remainingAttempts} attempt${remainingAttempts === 1 ? '' : 's'} remaining.`
+        : `Return saved. You have now used all ${savedAttemptLimit} attempts.`,
+    )
     setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
     setStep('Assessment')
     setIncomeTab('Income and Tax summary')
@@ -620,7 +660,13 @@ function App() {
       {screen === 'dashboard' && (
         <TraineeDashboard
           userName={session?.userName || ''}
+          attemptCount={Number(session?.attemptCount || 0)}
+          attemptLimit={Number(session?.attemptLimit || MAX_ATTEMPTS)}
           onEntry={() => {
+            if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || MAX_ATTEMPTS)) {
+              showToast('error', 'You have used all 7 attempts.')
+              return
+            }
             setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
             setStep('Assessment')
             setIncomeTab('Income and Tax summary')
@@ -752,12 +798,38 @@ function Topbar({ userName }) {
   )
 }
 
-function TraineeDashboard({ userName, onEntry }) {
+function AttemptMeter({ used, limit = MAX_ATTEMPTS, compact = false }) {
+  const safeUsed = Math.min(Math.max(Number(used || 0), 0), limit)
+  return (
+    <div className={`attempt-meter${compact ? ' compact' : ''}`} aria-label={`${safeUsed} of ${limit} attempts used`}>
+      {Array.from({ length: limit }, (_, index) => {
+        const completed = index < safeUsed
+        return (
+          <span key={index} className={`attempt-slot${completed ? ' used' : ''}`} title={`Attempt ${index + 1}: ${completed ? 'submitted' : 'available'}`}>
+            {completed ? <Check size={compact ? 11 : 13} aria-hidden="true" /> : index + 1}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+function TraineeDashboard({ userName, attemptCount, attemptLimit, onEntry }) {
+  const remaining = Math.max(attemptLimit - attemptCount, 0)
+  const limitReached = remaining === 0
   return (
     <section className="panel-list">
       <div className="panel-heading">
         <h2>PSR Detail Entries</h2>
         <span className="candidate-chip">Candidate: {userName}</span>
+      </div>
+      <div className={`attempt-summary${limitReached ? ' limit-reached' : ''}`}>
+        <div className="attempt-summary-copy">
+          <span>Attempt allowance</span>
+          <strong>{limitReached ? 'All attempts used' : `${remaining} of ${attemptLimit} remaining`}</strong>
+        </div>
+        <AttemptMeter used={attemptCount} limit={attemptLimit} />
+        <p>{limitReached ? <><Lock size={15} aria-hidden="true" /> No more returns can be submitted.</> : `Your next completed return will be attempt ${attemptCount + 1}.`}</p>
       </div>
       <div className="filter-panel">
         <label>Assessment Year <select defaultValue="2025-2026"><option>2025-2026</option></select></label>
@@ -791,8 +863,8 @@ function TraineeDashboard({ userName, onEntry }) {
             <td>{traineeRow.taxPaid173}</td>
             <td>{traineeRow.netAsset}</td>
             <td><span className="status-pill">{traineeRow.psrStatus}</span></td>
-            <td><span className="status-pill muted">{traineeRow.entryStatus}</span></td>
-            <td><button type="button" className="row-button" onClick={onEntry}>Entry</button></td>
+            <td><span className={`status-pill muted${limitReached ? ' locked' : ''}`}>{limitReached ? 'LIMIT_REACHED' : traineeRow.entryStatus}</span></td>
+            <td><button type="button" className="row-button" disabled={limitReached} onClick={onEntry}>{limitReached ? 'Limit reached' : 'Entry'}</button></td>
           </tr>
         </tbody>
       </table>
@@ -1280,6 +1352,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       createdAt: user.createdAt,
       attempts: userAttempts,
       latest: userAttempts[0],
+      attemptLimit: Number(user.attemptLimit || MAX_ATTEMPTS),
     }
   })
   const orphanAttemptRows = Object.entries(grouped)
@@ -1290,6 +1363,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       createdAt: userAttempts[0]?.createdAt,
       attempts: userAttempts,
       latest: userAttempts[0],
+      attemptLimit: MAX_ATTEMPTS,
     }))
   const allUserRows = [...userRows, ...orphanAttemptRows]
 
@@ -1328,7 +1402,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
           {!dataLoading && allUserRows.length === 0 && (
             <tr><td colSpan="5" className="empty-cell">No trainee usernames yet. Create one to begin.</td></tr>
           )}
-          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest }) => {
+          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest, attemptLimit }) => {
             const expanded = Boolean(expandedUsers[key])
             const userRow = (
               <tr key={key}>
@@ -1337,7 +1411,10 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
                     {username}
                   </button>
                 </td>
-                <td>{userAttempts.length}</td>
+                <td>
+                  <span className="attempt-count-label">{userAttempts.length} / {attemptLimit}</span>
+                  <AttemptMeter used={userAttempts.length} limit={attemptLimit} compact />
+                </td>
                 <td>{latest ? new Date(latest.submittedAt || latest.createdAt).toLocaleString() : 'No attempts yet'}</td>
                 <td>{latest ? `${latest.score}/100` : '-'}</td>
                 <td className="admin-actions">

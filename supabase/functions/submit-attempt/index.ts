@@ -20,6 +20,8 @@ Deno.serve(async (req: Request) => {
   if (!user) return jsonResponse({ error: 'This username was not created by admin.' }, 404)
   if (user.disabled_at) return jsonResponse({ error: 'This username is disabled.' }, 403)
 
+  const attemptLimit = Number(user.attempt_limit || 7)
+
   const payload = {
     ...submittedAttempt,
     userName: user.display_name || user.username,
@@ -39,7 +41,24 @@ Deno.serve(async (req: Request) => {
     .select('*')
     .single()
 
-  if (error) return jsonResponse({ error: error.message }, 500)
+  if (error) {
+    if (error.message?.includes('ATTEMPT_LIMIT_REACHED')) {
+      return jsonResponse({ error: `You have used all ${attemptLimit} attempts.` }, 409)
+    }
+    return jsonResponse({ error: error.message }, 500)
+  }
 
-  return jsonResponse({ attempt: data })
+  const { count, error: countError } = await supabase
+    .from('return_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('trainee_user_id', user.id)
+
+  if (countError) return jsonResponse({ error: countError.message }, 500)
+
+  return jsonResponse({
+    attempt: data,
+    attemptCount: Number(count || 0),
+    attemptLimit,
+    attemptsRemaining: Math.max(attemptLimit - Number(count || 0), 0),
+  })
 })

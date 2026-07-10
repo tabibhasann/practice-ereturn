@@ -19,5 +19,20 @@ Deno.serve(async (req: Request) => {
   if (!data) return jsonResponse({ error: 'This username was not created by admin.' }, 404)
   if (data.disabled_at) return jsonResponse({ error: 'This username is disabled.' }, 403)
 
-  return jsonResponse({ user: data })
+  const { count, error: countError } = await supabase
+    .from('return_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('trainee_user_id', data.id)
+
+  if (countError) return jsonResponse({ error: countError.message }, 500)
+
+  const attemptLimit = Number(data.attempt_limit || 7)
+  const attemptCount = Number(count || 0)
+
+  return jsonResponse({
+    user: data,
+    attemptCount,
+    attemptLimit,
+    attemptsRemaining: Math.max(attemptLimit - attemptCount, 0),
+  })
 })
