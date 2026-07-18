@@ -1486,8 +1486,10 @@ button:not(:disabled):hover {
 }
 
 .admin-actions {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
@@ -1511,6 +1513,96 @@ button:not(:disabled):hover {
 
 .copy-username:hover {
   color: #064f6d;
+}
+
+.deactivated-user-row td {
+  background: #f7f9fa;
+}
+
+.user-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.user-status.active {
+  color: #0c7556;
+  border-color: #9dd5c4;
+  background: #eaf7f2;
+}
+
+.user-status.deactivated {
+  color: #7c4d24;
+  border-color: #dfc2a6;
+  background: #fff5e9;
+}
+
+.user-options {
+  position: relative;
+}
+
+.user-options-button {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #cbd9dd;
+  border-radius: 3px;
+  color: #405b64;
+  background: white;
+  cursor: pointer;
+}
+
+.user-options-button:hover,
+.user-options-button[aria-expanded="true"] {
+  color: #0f735b;
+  border-color: #55aa91;
+  background: #eff8f5;
+}
+
+.user-options-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 174px;
+  padding: 5px;
+  border: 1px solid #cbd9dd;
+  background: white;
+  box-shadow: 0 10px 28px rgba(25, 51, 59, 0.18);
+}
+
+.user-options-menu button {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px;
+  border: 0;
+  color: #314b53;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-options-menu button:hover:not(:disabled) {
+  background: #edf5f3;
+}
+
+.user-options-menu .delete-option {
+  color: #b12c27;
+}
+
+.user-options-menu button:disabled {
+  color: #9ca9ad;
+  cursor: not-allowed;
 }
 
 .inline-copy {
@@ -1563,6 +1655,34 @@ button:not(:disabled):hover {
   margin-bottom: 14px;
   color: #0b735d;
   background: #e9f6f2;
+}
+
+.dialog-icon.danger {
+  color: #a92d28;
+  background: #faeceb;
+}
+
+.danger-button {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  border: 1px solid #b6312b;
+  border-radius: 3px;
+  color: white;
+  background: #c83b34;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #ab2d28;
+}
+
+.danger-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .confirmation-dialog h2 {

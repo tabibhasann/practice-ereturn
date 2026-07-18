@@ -8,9 +8,13 @@ import {
   Lock,
   LogOut,
   Menu,
+  MoreVertical,
   Plus,
+  Power,
+  RotateCcw,
   Search,
   Send,
+  Trash2,
   UserRound,
   X,
 } from 'lucide-react'
@@ -483,6 +487,38 @@ function App() {
     }
   }
 
+  const manageTraineeUser = async (username, action) => {
+    if (!isSupabaseConfigured) {
+      showToast('error', 'Unable to manage this username right now. Please try again shortly.')
+      return false
+    }
+    try {
+      const data = await callSupabaseFunction(
+        'admin-manage-username',
+        { username, action },
+        { adminToken: session?.adminToken },
+      )
+      const key = normalizeUserName(username)
+      if (action === 'delete') {
+        setUsers((current) => {
+          const next = { ...current }
+          delete next[key]
+          return next
+        })
+        showToast('success', `Deleted username ${username}.`)
+      } else {
+        setUsers((current) => ({ ...current, ...userRowsToMap([data.user]) }))
+        showToast('success', action === 'deactivate'
+          ? `Deactivated username ${username}.`
+          : `Restored username ${username}.`)
+      }
+      return true
+    } catch (error) {
+      showToast('error', error.message)
+      return false
+    }
+  }
+
   const logout = () => {
     if (session?.role === 'admin' && session.adminToken) {
       callSupabaseFunction('admin-logout', {}, { adminToken: session.adminToken }).catch(() => {})
@@ -699,6 +735,7 @@ function App() {
         users={users}
         dataLoading={dataLoading}
           onCreateUser={createTraineeUser}
+          onManageUser={manageTraineeUser}
           onLogout={logout}
           onNotify={showToast}
           onPreview={(item) => {
@@ -1450,8 +1487,11 @@ function AssetsForm({ attempt, patchAttempt, assetTab }) {
   return <AssetsSummary attempt={attempt} patchAttempt={patchAttempt} />
 }
 
-function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, onNotify, onPreview }) {
+function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onManageUser, onLogout, onNotify, onPreview }) {
   const [expandedUsers, setExpandedUsers] = useState({})
+  const [openMenu, setOpenMenu] = useState(null)
+  const [pendingAction, setPendingAction] = useState(null)
+  const [actionBusy, setActionBusy] = useState(false)
   const grouped = attempts.reduce((acc, attempt) => {
     const key = attemptUserKey(attempt)
     acc[key] = acc[key] || []
@@ -1468,6 +1508,8 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       latest: userAttempts[0],
       attemptLimit: Number(user.attemptLimit || ACTIVE_ATTEMPTS),
       practiceSubmissionCount: Number(user.practiceSubmissionCount || 0),
+      disabledAt: user.disabledAt,
+      managed: true,
     }
   })
   const orphanAttemptRows = Object.entries(grouped)
@@ -1480,6 +1522,8 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       latest: userAttempts[0],
       attemptLimit: ACTIVE_ATTEMPTS,
       practiceSubmissionCount: 0,
+      disabledAt: null,
+      managed: false,
     }))
   const allUserRows = [...userRows, ...orphanAttemptRows]
   const totalPracticeSubmissions = allUserRows.reduce((sum, user) => sum + user.practiceSubmissionCount, 0)
@@ -1494,6 +1538,19 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
     } catch {
       onNotify('error', 'Copy failed. Select and copy the username manually.')
     }
+  }
+
+  const requestUserAction = (username, action) => {
+    setOpenMenu(null)
+    setPendingAction({ username, action })
+  }
+
+  const confirmUserAction = async () => {
+    if (!pendingAction || actionBusy) return
+    setActionBusy(true)
+    const succeeded = await onManageUser(pendingAction.username, pendingAction.action)
+    setActionBusy(false)
+    if (succeeded) setPendingAction(null)
   }
 
   return (
@@ -1515,23 +1572,25 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
         <div className="admin-card"><strong>{formatScore(averageScore)}</strong><span>Average assessment score</span></div>
       </section>
       <table className="data-table admin-table">
-        <thead><tr><th>Username</th><th>Practice submissions</th><th>Assessment</th><th>Submitted</th><th>Score</th><th>Action</th></tr></thead>
+        <thead><tr><th>Username</th><th>Status</th><th>Practice submissions</th><th>Assessment</th><th>Submitted</th><th>Score</th><th>Action</th></tr></thead>
         <tbody>
           {dataLoading && (
-            <tr><td colSpan="6" className="empty-cell">Loading Supabase data...</td></tr>
+            <tr><td colSpan="7" className="empty-cell">Loading Supabase data...</td></tr>
           )}
           {!dataLoading && allUserRows.length === 0 && (
-            <tr><td colSpan="6" className="empty-cell">No trainee usernames yet. Create one to begin.</td></tr>
+            <tr><td colSpan="7" className="empty-cell">No trainee usernames yet. Create one to begin.</td></tr>
           )}
-          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest, attemptLimit, practiceSubmissionCount }) => {
+          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest, attemptLimit, practiceSubmissionCount, disabledAt, managed }) => {
             const expanded = Boolean(expandedUsers[key])
+            const canDelete = managed && practiceSubmissionCount === 0 && userAttempts.length === 0
             const userRow = (
-              <tr key={key}>
+              <tr key={key} className={disabledAt ? 'deactivated-user-row' : ''}>
                 <td>
                   <button type="button" className="copy-username" title="Copy username" onClick={() => copyUsername(username)}>
                     {username}
                   </button>
                 </td>
+                <td><span className={`user-status ${disabledAt ? 'deactivated' : 'active'}`}>{disabledAt ? 'Deactivated' : 'Active'}</span></td>
                 <td>
                   <strong className="practice-count">{practiceSubmissionCount}</strong>
                 </td>
@@ -1546,6 +1605,38 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
                     {expanded ? 'Hide attempts' : 'View attempts'}
                   </button>
                   <button type="button" className="row-button" disabled={!latest} onClick={() => onPreview(latest)}><Eye size={14} /> Latest</button>
+                  {managed && (
+                    <div className="user-options">
+                      <button
+                        type="button"
+                        className="user-options-button"
+                        aria-label={`Manage ${username}`}
+                        aria-expanded={openMenu === key}
+                        title="User options"
+                        onClick={() => setOpenMenu((current) => current === key ? null : key)}
+                      >
+                        <MoreVertical size={17} />
+                      </button>
+                      {openMenu === key && (
+                        <div className="user-options-menu">
+                          {disabledAt ? (
+                            <button type="button" onClick={() => requestUserAction(username, 'restore')}><RotateCcw size={15} /> Restore</button>
+                          ) : (
+                            <button type="button" onClick={() => requestUserAction(username, 'deactivate')}><Power size={15} /> Deactivate</button>
+                          )}
+                          <button
+                            type="button"
+                            className="delete-option"
+                            disabled={!canDelete}
+                            title={canDelete ? 'Delete this unused username' : 'Deactivate users with activity to preserve their records'}
+                            onClick={() => requestUserAction(username, 'delete')}
+                          >
+                            <Trash2 size={15} /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
             )
@@ -1553,6 +1644,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
               ? userAttempts.map((item, index) => (
                 <tr key={item.id} className="attempt-detail-row">
                   <td>Assessment {userAttempts.length - index}</td>
+                  <td>-</td>
                   <td>-</td>
                   <td>{item.status}</td>
                   <td>{new Date(item.submittedAt || item.createdAt).toLocaleString()}</td>
@@ -1565,6 +1657,54 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
           })}
         </tbody>
       </table>
+      {pendingAction && (
+        <UserActionDialog
+          action={pendingAction.action}
+          username={pendingAction.username}
+          busy={actionBusy}
+          onCancel={() => !actionBusy && setPendingAction(null)}
+          onConfirm={confirmUserAction}
+        />
+      )}
+    </div>
+  )
+}
+
+function UserActionDialog({ action, username, busy, onCancel, onConfirm }) {
+  const content = {
+    deactivate: {
+      title: `Deactivate ${username}?`,
+      message: 'This trainee will no longer be able to sign in. Practice counts and assessment records will be preserved.',
+      label: 'Deactivate',
+      icon: <Power size={22} />,
+    },
+    restore: {
+      title: `Restore ${username}?`,
+      message: 'This trainee will be able to sign in and continue using the website again.',
+      label: 'Restore',
+      icon: <RotateCcw size={22} />,
+    },
+    delete: {
+      title: `Delete ${username} permanently?`,
+      message: 'This unused username will be removed permanently. This action cannot be undone.',
+      label: 'Delete permanently',
+      icon: <Trash2 size={22} />,
+    },
+  }[action]
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+      <section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="user-action-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className={`dialog-icon ${action === 'restore' ? '' : 'danger'}`}>{content.icon}</div>
+        <h2 id="user-action-title">{content.title}</h2>
+        <p>{content.message}</p>
+        <div className="dialog-actions">
+          <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>Cancel</button>
+          <button type="button" className={action === 'restore' ? 'success-button' : 'danger-button'} disabled={busy} autoFocus onClick={onConfirm}>
+            {busy ? 'Working...' : content.label}
+          </button>
+        </div>
+      </section>
     </div>
   )
 }

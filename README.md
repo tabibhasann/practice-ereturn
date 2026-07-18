@@ -36,7 +36,7 @@ The production admin credential is provisioned separately. The password is salte
 
 The admin dashboard shows trainee practice counts and Assessment 1 submissions, scores, exact mistakes, and a full-form preview. Trainees never see scores, mistakes, or submission history. The marking key is derived from `new video.mp4`; its 110 visibly populated answers are compared on the server and normalized to a two-decimal percentage.
 
-The admin dashboard can also create and copy trainee usernames. Created users appear even before they submit an attempt.
+The admin dashboard can create and copy trainee usernames, deactivate and restore access, and permanently delete usernames that have never recorded practice or assessment activity. Users with activity must be deactivated so their audit history remains intact.
 
 ## Supabase Note
 
