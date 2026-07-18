@@ -359,7 +359,7 @@ function App() {
     const trimmedUserName = userName.trim()
     const normalizedUserName = normalizeUserName(userName)
     if (!isSupabaseConfigured) {
-      showToast('error', 'Database connection is not configured. Please contact the administrator.')
+      showToast('error', 'Unable to sign in right now. Please try again shortly.')
       return
     }
     if (normalizedUserName === ADMIN_USERNAME) {
@@ -411,7 +411,7 @@ function App() {
 
   const createTraineeUser = async () => {
     if (!isSupabaseConfigured) {
-      showToast('error', 'Database connection is not configured. Username was not created.')
+      showToast('error', 'Unable to create a username right now. Please try again shortly.')
       return
     }
     try {
@@ -552,7 +552,7 @@ function App() {
     let savedAttemptCount = Number(session?.attemptCount || 0) + 1
     let savedAttemptLimit = Number(session?.attemptLimit || ACTIVE_ATTEMPTS)
     if (!isSupabaseConfigured) {
-      showToast('error', 'Database connection is not configured. Return was not saved.')
+      showToast('error', 'Unable to save the return right now. Please try again shortly.')
       return
     }
     try {
@@ -594,7 +594,7 @@ function App() {
   }
 
   if (screen === 'login') {
-    return <LoginScreen onLogin={login} toast={toast} databaseConfigured={isSupabaseConfigured} />
+    return <LoginScreen onLogin={login} toast={toast} recoveryMode={window.location.hash === '#recovery'} />
   }
 
   if (screen === 'admin') {
@@ -669,7 +669,7 @@ function App() {
   )
 }
 
-function LoginScreen({ onLogin, toast, databaseConfigured }) {
+function LoginScreen({ onLogin, toast, recoveryMode }) {
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
   const [legacyData] = useState(() => readLegacyBrowserData())
@@ -690,12 +690,7 @@ function LoginScreen({ onLogin, toast, databaseConfigured }) {
         <Logo />
         <h1>Welcome!</h1>
         <p>Enter the username provided by the admin</p>
-        {!databaseConfigured && (
-          <div className="database-warning" role="alert">
-            Database connection unavailable. Sign-in is temporarily disabled.
-          </div>
-        )}
-        {(legacyUserCount > 0 || legacyAttemptCount > 0) && (
+        {recoveryMode && (legacyUserCount > 0 || legacyAttemptCount > 0) && (
           <section className="legacy-recovery" aria-label="Browser data recovery">
             <strong>Unsynced browser data found</strong>
             <span>{legacyUserCount} username{legacyUserCount === 1 ? '' : 's'} and {legacyAttemptCount} attempt{legacyAttemptCount === 1 ? '' : 's'}</span>
@@ -715,7 +710,7 @@ function LoginScreen({ onLogin, toast, databaseConfigured }) {
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
           </label>
         )}
-        <button type="submit" className="primary-button" disabled={!databaseConfigured}>Sign In</button>
+        <button type="submit" className="primary-button">Sign In</button>
       </form>
     </div>
   )
