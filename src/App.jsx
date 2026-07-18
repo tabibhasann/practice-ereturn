@@ -3,7 +3,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Download,
   Eye,
   FileText,
   Lock,
@@ -1497,26 +1496,6 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
     }
   }
 
-  const exportBackup = () => {
-    const backup = {
-      format: 'practice-ereturn-backup',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      users,
-      attempts,
-    }
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `practice-ereturn-backup-${new Date().toLocaleDateString('en-CA')}.json`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
-    onNotify('success', 'Backup downloaded.')
-  }
-
   return (
     <div className="admin-screen">
       <header className="admin-header">
@@ -1525,7 +1504,6 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
           <p>Create trainee usernames, monitor attempts, marks, and previews.</p>
         </div>
         <div className="admin-header-actions">
-          <button type="button" className="secondary-button" disabled={dataLoading} onClick={exportBackup}><Download size={16} /> Export backup</button>
           <button type="button" className="success-button" onClick={onCreateUser}><Plus size={16} /> Create trainee</button>
           <button type="button" className="secondary-button" onClick={onLogout}>Logout</button>
         </div>

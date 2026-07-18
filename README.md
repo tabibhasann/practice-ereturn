@@ -30,7 +30,7 @@ The production admin credential is provisioned separately. The password is salte
 ## Data safety
 
 - Production data is stored only in Supabase project `wiqtbrexjjqzdtyvbwdm` (`practice-ereturn`). The app does not create browser-only users or attempts when Supabase is unavailable.
-- The admin dashboard includes **Export backup**. Download a JSON backup after each examination session and keep it outside Supabase.
+- Usernames, practice counts, and assessment submissions synchronize directly to Supabase; no manual browser export is needed for normal operation.
 - Restrict Supabase organization membership, enable MFA for every owner, and pause rather than delete the project. Supabase treats project deletion as permanent.
 - Database schema, policies, scoring logic, and Edge Function source are versioned in this repository. Production secrets are not.
 
