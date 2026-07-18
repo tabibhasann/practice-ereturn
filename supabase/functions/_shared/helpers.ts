@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0'
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0'
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,13 +50,43 @@ export function createAdminClient() {
   return createClient(supabaseUrl, adminKey)
 }
 
-export function requireAdmin(body: Record<string, unknown>, req: Request) {
-  const expectedUsername = Deno.env.get('ADMIN_USERNAME') || 'admin-nbr-7k4p9q'
-  const expected = Deno.env.get('ADMIN_PASSWORD') || 'admin2026'
+async function sha256(value: string) {
+  const bytes = new TextEncoder().encode(value)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+function constantTimeEqual(left: string, right: string) {
+  if (left.length !== right.length) return false
+  let difference = 0
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index)
+  }
+  return difference === 0
+}
+
+export async function requireAdmin(
+  supabase: SupabaseClient,
+  body: Record<string, unknown>,
+  req: Request,
+) {
   const suppliedUsername = String(body.adminUsername || '')
   const supplied = req.headers.get('x-admin-password') || String(body.adminPassword || '')
+  if (!suppliedUsername || !supplied) {
+    return jsonResponse({ error: 'Unauthorized admin request.' }, 401)
+  }
 
-  if (suppliedUsername !== expectedUsername || supplied !== expected) {
+  const { data, error } = await supabase
+    .from('admin_credentials')
+    .select('password_hash')
+    .eq('username', suppliedUsername)
+    .maybeSingle()
+
+  if (error || !data) return jsonResponse({ error: 'Unauthorized admin request.' }, 401)
+
+  const suppliedHash = await sha256(supplied)
+
+  if (!constantTimeEqual(suppliedHash, data.password_hash)) {
     return jsonResponse({ error: 'Unauthorized admin request.' }, 401)
   }
 
@@ -64,5 +94,5 @@ export function requireAdmin(body: Record<string, unknown>, req: Request) {
 }
 
 export function makeUsername() {
-  return `USR-${crypto.randomUUID().replaceAll('-', '').slice(0, 6).toUpperCase()}`
+  return `USR-${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`
 }

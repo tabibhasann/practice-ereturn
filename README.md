@@ -24,12 +24,7 @@ This is not connected to the real NBR website. It is a safe practice clone where
 
 ## Admin
 
-Admin credential:
-
-```text
-username: admin
-password: admin2026
-```
+The production admin credential is provisioned separately. Only its one-way password hash is stored in Supabase; the password is not committed or bundled into the frontend.
 
 The admin dashboard shows submitted users, attempt counts, server-calculated scores, and a full preview of each attempt. The marking key is derived from `new video.mp4`; every scored field and control is compared on the server, and each mismatch records the expected and submitted answer.
 

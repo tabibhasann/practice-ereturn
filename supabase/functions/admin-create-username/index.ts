@@ -5,10 +5,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed.' }, 405)
 
   const body = await readJson(req)
-  const adminError = requireAdmin(body, req)
-  if (adminError) return adminError
-
   const supabase = createAdminClient()
+  const adminError = await requireAdmin(supabase, body, req)
+  if (adminError) return adminError
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const username = makeUsername()

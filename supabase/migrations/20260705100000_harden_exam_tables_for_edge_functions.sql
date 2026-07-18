@@ -32,3 +32,6 @@ drop policy if exists "anon can submit return attempts" on public.return_attempt
 
 revoke select, insert, update, delete on public.trainee_users from anon, authenticated;
 revoke select, insert, update, delete on public.return_attempts from anon, authenticated;
+
+grant select, insert, update, delete on public.trainee_users to service_role;
+grant select, insert, update, delete on public.return_attempts to service_role;

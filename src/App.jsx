@@ -17,7 +17,7 @@ import {
 import './App.css'
 import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 
-const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
+const ADMIN_USERNAME = 'admin-nbr-edae54c24d9f'
 const MAX_ATTEMPTS = 7
 const ACTIVE_ATTEMPTS = 1
 const LEGACY_ATTEMPTS_KEY = 'practice-ereturn-attempts'
