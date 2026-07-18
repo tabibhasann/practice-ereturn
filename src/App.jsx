@@ -20,6 +20,8 @@ import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
 const MAX_ATTEMPTS = 7
 const ACTIVE_ATTEMPTS = 1
+const LEGACY_ATTEMPTS_KEY = 'practice-ereturn-attempts'
+const LEGACY_USERS_KEY = 'practice-ereturn-users'
 
 const steps = ['Assessment', 'Income and Tax', 'Assets']
 
@@ -265,6 +267,35 @@ function createBlankAttempt(userName = '', userCode = '') {
 
 function normalizeUserName(userName) {
   return userName.trim().toLowerCase()
+}
+
+function readLegacyBrowserData() {
+  try {
+    const users = JSON.parse(localStorage.getItem(LEGACY_USERS_KEY) || '{}')
+    const attempts = JSON.parse(localStorage.getItem(LEGACY_ATTEMPTS_KEY) || '[]')
+    return {
+      users: users && typeof users === 'object' && !Array.isArray(users) ? users : {},
+      attempts: Array.isArray(attempts) ? attempts : [],
+    }
+  } catch {
+    return { users: {}, attempts: [] }
+  }
+}
+
+function downloadLegacyBrowserData(data) {
+  const payload = {
+    format: 'practice-ereturn-browser-recovery-v1',
+    exportedAt: new Date().toISOString(),
+    sourceOrigin: window.location.origin,
+    ...data,
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `practice-ereturn-recovery-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 function userRowsToMap(rows = []) {
@@ -641,7 +672,10 @@ function App() {
 function LoginScreen({ onLogin, toast, databaseConfigured }) {
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
+  const [legacyData] = useState(() => readLegacyBrowserData())
   const adminMode = normalizeUserName(userName) === ADMIN_USERNAME
+  const legacyUserCount = Object.keys(legacyData.users).length
+  const legacyAttemptCount = legacyData.attempts.length
 
   return (
     <div className="login-screen">
@@ -660,6 +694,16 @@ function LoginScreen({ onLogin, toast, databaseConfigured }) {
           <div className="database-warning" role="alert">
             Database connection unavailable. Sign-in is temporarily disabled.
           </div>
+        )}
+        {(legacyUserCount > 0 || legacyAttemptCount > 0) && (
+          <section className="legacy-recovery" aria-label="Browser data recovery">
+            <strong>Unsynced browser data found</strong>
+            <span>{legacyUserCount} username{legacyUserCount === 1 ? '' : 's'} and {legacyAttemptCount} attempt{legacyAttemptCount === 1 ? '' : 's'}</span>
+            <button type="button" onClick={() => downloadLegacyBrowserData(legacyData)}>
+              <FileText size={15} />
+              Download recovery file
+            </button>
+          </section>
         )}
         <label>
           Username

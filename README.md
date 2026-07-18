@@ -39,6 +39,8 @@ The admin dashboard can also create and copy trainee usernames. Created users ap
 
 For about 500 attempts, JSON-only storage should be small, usually only a few megabytes. The main storage risk would come from saving generated PDFs, screenshots, or attachments; those should go into Supabase Storage only if needed.
 
+If an older deployment created browser-only records, the login page detects them without deleting them and offers a recovery JSON download. Recovery must be performed in the same browser profile and on the same site address where those records were created.
+
 ## Run Locally
 
 ```bash
