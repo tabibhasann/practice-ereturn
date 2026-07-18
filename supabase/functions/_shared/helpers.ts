@@ -8,6 +8,7 @@ export const corsHeaders = {
 
 const MAX_REQUEST_BYTES = 2_000_000
 const ALLOWED_BROWSER_ORIGINS = new Set([
+  'https://ereturn.tabibhasan.com',
   'https://ereturn-sable.vercel.app',
   'http://127.0.0.1:5173',
   'http://localhost:5173',
