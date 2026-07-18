@@ -45,36 +45,46 @@ export async function recoverBrowserData(
     ? recovery.attempts.slice(0, MAX_ATTEMPTS).map(asRecord)
     : []
   const allowedUsername = validUsername(options.allowedUsername)
-  const usernames = new Set<string>()
+  const recoveredUsers = new Map<string, string>()
+  const recoverySource = String(recovery.sourceOrigin || 'browser-local').slice(0, 200)
 
   if (options.allowCreateUsers) {
     for (const [key, value] of Object.entries(rawUsers).slice(0, MAX_USERS)) {
       const user = asRecord(value)
       const username = validUsername(user.username || user.userName || key)
-      if (username) usernames.add(username)
+      if (username) recoveredUsers.set(username, validTimestamp(user.createdAt))
     }
     for (const attempt of rawAttempts) {
       const username = attemptUsername(attempt)
-      if (username) usernames.add(username)
+      if (username && !recoveredUsers.has(username)) {
+        recoveredUsers.set(username, validTimestamp(attempt.createdAt || attempt.submittedAt))
+      }
     }
 
-    if (usernames.size) {
+    if (recoveredUsers.size) {
       const { error } = await supabase.from('trainee_users').upsert(
-        Array.from(usernames, (username) => ({ username, display_name: username, attempt_limit: 1 })),
+        Array.from(recoveredUsers, ([username, createdAt]) => ({
+          username,
+          display_name: username,
+          attempt_limit: 1,
+          created_at: createdAt,
+          recovered_at: new Date().toISOString(),
+          recovery_source: recoverySource,
+        })),
         { onConflict: 'username', ignoreDuplicates: true },
       )
       if (error) throw error
     }
   } else if (allowedUsername) {
-    usernames.add(allowedUsername)
+    recoveredUsers.set(allowedUsername, new Date().toISOString())
   }
 
-  if (!usernames.size) return { processed: true, userCount: 0, attemptCount: 0 }
+  if (!recoveredUsers.size) return { processed: true, userCount: 0, attemptCount: 0 }
 
   const { data: userRows, error: usersError } = await supabase
     .from('trainee_users')
     .select('id, username')
-    .in('username', Array.from(usernames))
+    .in('username', Array.from(recoveredUsers.keys()))
   if (usersError) throw usersError
 
   const usersByUsername = new Map((userRows || []).map((user) => [user.username, user]))
@@ -108,7 +118,7 @@ export async function recoverBrowserData(
       },
       source_attempt_id: await sourceAttemptId(attempt),
       recovered_at: options.preserveAllAttempts ? new Date().toISOString() : null,
-      recovery_source: String(recovery.sourceOrigin || 'browser-local').slice(0, 200),
+      recovery_source: recoverySource,
     })
   }
 

@@ -1,3 +1,7 @@
+alter table public.trainee_users
+  add column if not exists recovered_at timestamptz,
+  add column if not exists recovery_source text;
+
 alter table public.return_attempts
   add column if not exists source_attempt_id text,
   add column if not exists recovered_at timestamptz,
