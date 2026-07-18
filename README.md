@@ -39,7 +39,7 @@ The admin dashboard can also create and copy trainee usernames. Created users ap
 
 For about 500 attempts, JSON-only storage should be small, usually only a few megabytes. The main storage risk would come from saving generated PDFs, screenshots, or attachments; those should go into Supabase Storage only if needed.
 
-If an older deployment created browser-only records, the private `#recovery` route detects them without deleting them and offers a recovery JSON download. Recovery must be performed in the same browser profile and on the same site address where those records were created.
+Older browser-only records are synchronized silently after a successful login. A valid admin login can restore usernames and attempts from that browser; a trainee login can restore that existing trainee's first attempt. The server deduplicates recovered attempts and recalculates every score.
 
 ## Run Locally
 

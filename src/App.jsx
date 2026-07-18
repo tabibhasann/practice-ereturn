@@ -282,20 +282,41 @@ function readLegacyBrowserData() {
   }
 }
 
-function downloadLegacyBrowserData(data) {
-  const payload = {
-    format: 'practice-ereturn-browser-recovery-v1',
-    exportedAt: new Date().toISOString(),
-    sourceOrigin: window.location.origin,
-    ...data,
-  }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `practice-ereturn-recovery-${new Date().toISOString().slice(0, 10)}.json`
-  link.click()
-  URL.revokeObjectURL(url)
+function hasLegacyBrowserData(data) {
+  return Object.keys(data.users).length > 0 || data.attempts.length > 0
+}
+
+function legacyRecoveryPayload(data) {
+  return hasLegacyBrowserData(data)
+    ? { ...data, sourceOrigin: window.location.origin }
+    : null
+}
+
+function clearAllLegacyBrowserData() {
+  localStorage.removeItem(LEGACY_USERS_KEY)
+  localStorage.removeItem(LEGACY_ATTEMPTS_KEY)
+  return { users: {}, attempts: [] }
+}
+
+function clearLegacyBrowserUser(data, username) {
+  const normalized = normalizeUserName(username)
+  const users = Object.fromEntries(
+    Object.entries(data.users).filter(([key, user]) => {
+      const candidate = user?.username || user?.userName || key
+      return normalizeUserName(String(candidate)) !== normalized
+    }),
+  )
+  const attempts = data.attempts.filter((item) => {
+    const candidate = item?.userCode || item?.userName || item?.username || ''
+    return normalizeUserName(String(candidate)) !== normalized
+  })
+
+  if (Object.keys(users).length) localStorage.setItem(LEGACY_USERS_KEY, JSON.stringify(users))
+  else localStorage.removeItem(LEGACY_USERS_KEY)
+  if (attempts.length) localStorage.setItem(LEGACY_ATTEMPTS_KEY, JSON.stringify(attempts))
+  else localStorage.removeItem(LEGACY_ATTEMPTS_KEY)
+
+  return { users, attempts }
 }
 
 function userRowsToMap(rows = []) {
@@ -332,6 +353,7 @@ function App() {
   const [attempt, setAttempt] = useState(() => createBlankAttempt())
   const [attempts, setAttempts] = useState([])
   const [users, setUsers] = useState({})
+  const [legacyData, setLegacyData] = useState(() => readLegacyBrowserData())
   const [dataLoading, setDataLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [previewAttempt, setPreviewAttempt] = useState(null)
@@ -345,11 +367,17 @@ function App() {
     if (!isSupabaseConfigured) return
     setDataLoading(true)
     try {
-      const data = await callSupabaseFunction('admin-users', adminCredentials)
+      const data = await callSupabaseFunction('admin-users', {
+        ...adminCredentials,
+        legacyRecovery: legacyRecoveryPayload(legacyData),
+      })
       setUsers(userRowsToMap(data.users || []))
       setAttempts((data.attempts || []).map(attemptRowToAttempt))
+      if (data.recovery?.processed) setLegacyData(clearAllLegacyBrowserData())
+      return true
     } catch (error) {
       showToast('error', error.message || 'Could not load Supabase data.')
+      return false
     } finally {
       setDataLoading(false)
     }
@@ -368,7 +396,8 @@ function App() {
         return
       }
       const adminCredentials = { adminUsername: ADMIN_USERNAME, adminPassword: password }
-      await loadAdminData(adminCredentials)
+      const loaded = await loadAdminData(adminCredentials)
+      if (!loaded) return
       setSession({ role: 'admin', userName: ADMIN_USERNAME, ...adminCredentials })
       setScreen('admin')
       return
@@ -380,10 +409,22 @@ function App() {
 
     let existingUser
     try {
-      const data = await callSupabaseFunction('trainee-login', { username: trimmedUserName })
+      const data = await callSupabaseFunction('trainee-login', {
+        username: trimmedUserName,
+        legacyRecovery: legacyRecoveryPayload({
+          users: {},
+          attempts: legacyData.attempts.filter((item) => {
+            const candidate = item?.userCode || item?.userName || item?.username || ''
+            return normalizeUserName(String(candidate)) === normalizedUserName
+          }),
+        }),
+      })
       existingUser = userRowsToMap([data.user])[normalizeUserName(data.user.username)]
       existingUser.attemptCount = Number(data.attemptCount || 0)
       setUsers((current) => ({ ...current, [normalizeUserName(data.user.username)]: existingUser }))
+      if (data.recovery?.processed) {
+        setLegacyData((current) => clearLegacyBrowserUser(current, normalizedUserName))
+      }
     } catch (error) {
       showToast('error', error.message || 'This username was not created by admin.')
       return
@@ -594,7 +635,7 @@ function App() {
   }
 
   if (screen === 'login') {
-    return <LoginScreen onLogin={login} toast={toast} recoveryMode={window.location.hash === '#recovery'} />
+    return <LoginScreen onLogin={login} toast={toast} />
   }
 
   if (screen === 'admin') {
@@ -669,13 +710,10 @@ function App() {
   )
 }
 
-function LoginScreen({ onLogin, toast, recoveryMode }) {
+function LoginScreen({ onLogin, toast }) {
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
-  const [legacyData] = useState(() => readLegacyBrowserData())
   const adminMode = normalizeUserName(userName) === ADMIN_USERNAME
-  const legacyUserCount = Object.keys(legacyData.users).length
-  const legacyAttemptCount = legacyData.attempts.length
 
   return (
     <div className="login-screen">
@@ -690,16 +728,6 @@ function LoginScreen({ onLogin, toast, recoveryMode }) {
         <Logo />
         <h1>Welcome!</h1>
         <p>Enter the username provided by the admin</p>
-        {recoveryMode && (legacyUserCount > 0 || legacyAttemptCount > 0) && (
-          <section className="legacy-recovery" aria-label="Browser data recovery">
-            <strong>Unsynced browser data found</strong>
-            <span>{legacyUserCount} username{legacyUserCount === 1 ? '' : 's'} and {legacyAttemptCount} attempt{legacyAttemptCount === 1 ? '' : 's'}</span>
-            <button type="button" onClick={() => downloadLegacyBrowserData(legacyData)}>
-              <FileText size={15} />
-              Download recovery file
-            </button>
-          </section>
-        )}
         <label>
           Username
           <input value={userName} onChange={(event) => setUserName(event.target.value)} autoFocus />

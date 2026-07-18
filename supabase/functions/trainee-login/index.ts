@@ -1,4 +1,5 @@
 import { corsHeaders, createAdminClient, jsonResponse, normalizeUsername, readJson } from '../_shared/helpers.ts'
+import { recoverBrowserData } from '../_shared/recovery.ts'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -19,6 +20,19 @@ Deno.serve(async (req: Request) => {
   if (!data) return jsonResponse({ error: 'This username was not created by admin.' }, 404)
   if (data.disabled_at) return jsonResponse({ error: 'This username is disabled.' }, 403)
 
+  let recovery = null
+  if (body.legacyRecovery) {
+    try {
+      recovery = await recoverBrowserData(supabase, body.legacyRecovery, {
+        allowCreateUsers: false,
+        allowedUsername: username,
+        preserveAllAttempts: false,
+      })
+    } catch (error) {
+      return jsonResponse({ error: error instanceof Error ? error.message : 'Could not synchronize data.' }, 500)
+    }
+  }
+
   const { count, error: countError } = await supabase
     .from('return_attempts')
     .select('id', { count: 'exact', head: true })
@@ -34,5 +48,6 @@ Deno.serve(async (req: Request) => {
     attemptCount,
     attemptLimit,
     attemptsRemaining: Math.max(attemptLimit - attemptCount, 0),
+    recovery,
   })
 })
