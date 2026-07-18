@@ -4,7 +4,7 @@
 
 This project is a practice website for an NBR eReturn Office-style data-entry workflow. The real website already exists; this local app is meant to let trainees practice the same screens and form behavior before entering data into the real system.
 
-The app now uses Supabase for admin-created trainee usernames and submitted attempts when the local Supabase environment variables are configured. It keeps a localStorage fallback only for offline/local demos without Supabase env vars.
+The app uses Supabase for admin-created trainee usernames, practice counts, and assessment submissions. It fails closed when Supabase is unavailable; browser-only users and new submissions are never created.
 
 ## What The Video And PDFs Show
 
@@ -15,16 +15,18 @@ The important workflow is:
 1. Admin creates a unique trainee username.
 2. A trainee signs in with that username only.
 3. The office dashboard shows one PSR detail row with status `NOT_INITIALIZED`.
-4. The trainee clicks `Entry`.
-5. The form opens on `Assessment`.
+4. The trainee chooses unlimited `Practice` or the unlocked `Assessment 1`.
+5. Either mode opens a fresh blank form on `Assessment`.
 6. Required red-star fields must be filled before draft save.
 7. `Income and Tax` starts with only `Income and Tax summary`.
 8. Extra income tabs only appear when their source checkbox is selected.
 9. Every amount field is manual, including total rows.
 10. The trainee saves drafts page by page.
-11. The final `Assets > Living Expenditure` page unlocks `Save Return`.
-12. Saving the return submits the attempt to Supabase, resets the trainee to the dashboard, and prepares a blank next attempt.
-13. The admin can later review submitted attempts.
+11. The final `Assets > Living Expenditure` page unlocks the mode's completion action.
+12. Practice increments only the trainee's practice count; it stores no form, score, or mistakes.
+13. Assessment stores the complete form and authoritative server score, then locks Assessment 1.
+14. The trainee returns to the dashboard and cannot see scores or prior submissions.
+15. The admin can review assessment scores, mistakes, and full-form previews.
 
 ## Assessment
 
@@ -66,26 +68,21 @@ The assets section has:
 - `Assets Summary`
 - `Living Expenditure`
 
-The rows are based on PDFs 7, 8, and 9. `Save Return` is only available after reaching and saving the final living-expenditure page.
+The rows are based on PDFs 7, 8, and 9. `Complete Practice` or `Submit Assessment` is only available after reaching and saving the final living-expenditure page.
 
 ## Admin Dashboard
-
-Admin credential:
-
-```text
-admin / admin2026
-```
 
 The admin can see:
 
 - usernames created by admin, including users with zero attempts
 - users who submitted attempts
-- number of attempts per user
+- practice submission count per user
+- Assessment 1 status
 - latest attempt time
 - server-calculated score
 - preview of every attempt and its exact field-level mistakes
 
-The marking rules are based on the completed reference return in `new video.mp4`. The answer key currently contains 202 scored controls across Assessment, Income and Tax, Assets Summary, and Living Expenditure.
+The marking rules are based on the completed reference return in `new video.mp4`. The answer key contains 110 visibly populated answers across Assessment, Income and Tax, Assets Summary, and Living Expenditure. Blank reference fields are not scored.
 
 ## Supabase Estimate
 

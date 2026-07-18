@@ -9,7 +9,8 @@ This is not connected to the real NBR website. It is a safe practice clone where
 - Admin creates trainee usernames from the admin dashboard.
 - Trainees sign in with only their username. No trainee password is required.
 - The trainee dashboard shows exactly one `NOT_INITIALIZED` PSR row.
-- Clicking `Entry` opens a blank attempt.
+- `Start Practice` opens a blank, unscored practice return. Practice is unlimited and only its completion count is retained.
+- `Begin Assessment` opens Assessment 1 after confirmation. Assessments 2-7 remain visibly locked.
 - The form starts at `Assessment`, then moves to `Income and Tax`, then `Assets`.
 - `Save Draft` validates required red-star fields. Errors show a red toast; successful saves show a green toast.
 - `Next` becomes available only after the current page is saved.
@@ -19,12 +20,12 @@ This is not connected to the real NBR website. It is a safe practice clone where
   - financial assets enables `Income from financial assets`
   - tax rebate enables `Tax rebate`
 - Number fields are manual. Totals are not automatically calculated.
-- `Save Return` appears on the final living-expenditure page after saving that page.
-- Created trainee usernames and submitted attempts are stored in Supabase. Production sign-in is disabled when `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY` is missing, so the app can never silently create browser-only accounts.
+- The final action is `Complete Practice` in practice mode and `Submit Assessment` in assessment mode.
+- Created usernames, practice counts, and assessment submissions are stored in Supabase. Production sign-in is disabled when Supabase configuration is missing, so the app cannot silently create browser-only accounts.
 
 ## Admin
 
-The production admin credential is provisioned separately. Only its one-way password hash is stored in Supabase; the password is not committed or bundled into the frontend.
+The production admin credential is provisioned separately. The password is salted and PBKDF2-hashed in Supabase; successful login issues a random, expiring server-side session that is revoked at logout. Neither the password nor an admin secret is bundled into the frontend.
 
 ## Data safety
 
@@ -33,13 +34,13 @@ The production admin credential is provisioned separately. Only its one-way pass
 - Restrict Supabase organization membership, enable MFA for every owner, and pause rather than delete the project. Supabase treats project deletion as permanent.
 - Database schema, policies, scoring logic, and Edge Function source are versioned in this repository. Production secrets are not.
 
-The admin dashboard shows submitted users, attempt counts, server-calculated scores, and a full preview of each attempt. The marking key is derived from `new video.mp4`; every scored field and control is compared on the server, and each mismatch records the expected and submitted answer.
+The admin dashboard shows trainee practice counts and Assessment 1 submissions, scores, exact mistakes, and a full-form preview. Trainees never see scores, mistakes, or submission history. The marking key is derived from `new video.mp4`; its 110 visibly populated answers are compared on the server and normalized to a two-decimal percentage.
 
 The admin dashboard can also create and copy trainee usernames. Created users appear even before they submit an attempt.
 
 ## Supabase Note
 
-For about 500 attempts, JSON-only storage should be small, usually only a few megabytes. The main storage risk would come from saving generated PDFs, screenshots, or attachments; those should go into Supabase Storage only if needed.
+For about 500 assessments, JSON-only storage should be small, usually only a few megabytes. Practice stores only a counter and timestamp, not the form payload. The main storage risk would come from generated PDFs, screenshots, or attachments; those should go into Supabase Storage only if needed.
 
 Older browser-only records are synchronized silently after a successful login. A valid admin login can restore usernames and attempts from that browser; a trainee login can restore that existing trainee's first attempt. The server deduplicates recovered attempts and recalculates every score.
 
@@ -60,6 +61,7 @@ http://127.0.0.1:5173/
 
 ```bash
 npm run lint
+npm test
 npm run build
 ```
 

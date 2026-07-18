@@ -3,7 +3,7 @@ const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey)
 
-export async function callSupabaseFunction(name, payload = {}) {
+export async function callSupabaseFunction(name, payload = {}, options = {}) {
   if (!isSupabaseConfigured) {
     throw new Error('Supabase is not configured.')
   }
@@ -13,6 +13,7 @@ export async function callSupabaseFunction(name, payload = {}) {
     headers: {
       apikey: supabasePublishableKey,
       'Content-Type': 'application/json',
+      ...(options.adminToken ? { 'x-admin-session': options.adminToken } : {}),
     },
     body: JSON.stringify(payload),
   })

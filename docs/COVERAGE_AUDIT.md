@@ -7,9 +7,9 @@ This audit reflects the current implementation after reviewing the new PDFs in `
 1. Office shell with `eReturn OFFICE`, sidebar items, assessment-year selector, search, `Third Party User 1`, and avatar.
 2. Admin-created trainee usernames.
 3. Trainee login with only a username and no trainee password.
-4. Admin login using `admin / admin2026`.
+4. Admin login using a salted password hash and expiring server-side session.
 4. Trainee dashboard with only one row and initial status `NOT_INITIALIZED`.
-5. `Entry` starts a fresh blank attempt.
+5. Unlimited practice and Assessment 1 each start a fresh blank form; Assessments 2-7 are locked.
 6. Assessment page based on the video:
    - register serial number
    - register volume number
@@ -41,15 +41,16 @@ This audit reflects the current implementation after reviewing the new PDFs in `
 23. Rebate schedule rows from PDFs 5-6.
 24. Assets Summary rows from PDF 7.
 25. Living Expenditure rows from PDFs 8-9.
-26. Final `Save Return` unlocks only after saving `Living Expenditure`.
-27. Submitted attempt is saved under the trainee username and the trainee returns to the one-row dashboard.
-28. Admin dashboard lists created usernames, users with zero attempts, attempt counts, latest submission, score, and preview.
+26. Final practice/assessment submission unlocks only after saving `Living Expenditure`.
+27. Practice stores only a counter and timestamp; assessment stores the full marked form.
+28. Trainees see neither scores nor submission history.
+29. Admin dashboard lists users, practice counts, assessment status, latest submission, score, exact mistakes, and full-form preview.
 
 ## Placeholder Or Future Work
 
-- Supabase is connected for the current local environment. If Supabase env vars are missing, the app falls back to localStorage.
-- Scoring uses the complete field-level answer key demonstrated in `new video.mp4`. The Supabase submission function calculates the score and mistake list; client-provided scores are ignored.
-- The admin preview summarizes the attempt; it is not yet a full PDF-style return renderer.
+- Supabase is connected for the current production environment. If configuration is missing, sign-in and writes fail closed.
+- Scoring uses 110 visibly answered controls from `new video.mp4`. The Supabase submission function calculates the two-decimal score and mistake list; client-provided scores are ignored.
+- Admin preview renders every form page, including fields the trainee left blank.
 - Exact pixel-perfect matching may still need small spacing/color tweaks after stakeholder review, but the field coverage and interaction logic are in place.
 
 ## Verification Run

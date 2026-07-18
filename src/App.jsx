@@ -18,7 +18,7 @@ import {
 import './App.css'
 import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 
-const ADMIN_USERNAME = 'admin-nbr-edae54c24d9f'
+const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
 const MAX_ATTEMPTS = 7
 const ACTIVE_ATTEMPTS = 1
 const LEGACY_ATTEMPTS_KEY = 'practice-ereturn-attempts'
@@ -328,6 +328,8 @@ function userRowsToMap(rows = []) {
     createdAt: row.created_at,
     disabledAt: row.disabled_at,
     attemptLimit: Math.min(Number(row.attempt_limit || ACTIVE_ATTEMPTS), ACTIVE_ATTEMPTS),
+    practiceSubmissionCount: Number(row.practice_submission_count || 0),
+    lastPracticedAt: row.last_practiced_at,
   }]))
 }
 
@@ -345,6 +347,11 @@ function attemptRowToAttempt(row) {
   }
 }
 
+function formatScore(score) {
+  const value = Number(score)
+  return Number.isFinite(value) ? value.toFixed(2) : '-'
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [screen, setScreen] = useState('login')
@@ -358,20 +365,21 @@ function App() {
   const [dataLoading, setDataLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [previewAttempt, setPreviewAttempt] = useState(null)
+  const [entryMode, setEntryMode] = useState('practice')
+  const [assessmentConfirmOpen, setAssessmentConfirmOpen] = useState(false)
 
   const showToast = (type, message) => {
     setToast({ type, message })
     window.setTimeout(() => setToast(null), 2400)
   }
 
-  const loadAdminData = async (adminCredentials) => {
+  const loadAdminData = async (adminToken) => {
     if (!isSupabaseConfigured) return
     setDataLoading(true)
     try {
       const data = await callSupabaseFunction('admin-users', {
-        ...adminCredentials,
         legacyRecovery: legacyRecoveryPayload(legacyData),
-      })
+      }, { adminToken })
       setUsers(userRowsToMap(data.users || []))
       setAttempts((data.attempts || []).map(attemptRowToAttempt))
       if (data.recovery?.processed) setLegacyData(clearAllLegacyBrowserData())
@@ -396,10 +404,19 @@ function App() {
         showToast('error', 'Please enter the admin password.')
         return
       }
-      const adminCredentials = { adminUsername: ADMIN_USERNAME, adminPassword: password }
-      const loaded = await loadAdminData(adminCredentials)
+      let adminSession
+      try {
+        adminSession = await callSupabaseFunction('admin-login', {
+          adminUsername: ADMIN_USERNAME,
+          adminPassword: password,
+        })
+      } catch (error) {
+        showToast('error', error.message || 'Invalid admin credentials.')
+        return
+      }
+      const loaded = await loadAdminData(adminSession.adminToken)
       if (!loaded) return
-      setSession({ role: 'admin', userName: ADMIN_USERNAME, ...adminCredentials })
+      setSession({ role: 'admin', userName: ADMIN_USERNAME, adminToken: adminSession.adminToken })
       setScreen('admin')
       return
     }
@@ -446,6 +463,8 @@ function App() {
       accountKey: normalizedUserName,
       attemptCount: Number(existingUser.attemptCount || 0),
       attemptLimit: Number(existingUser.attemptLimit || ACTIVE_ATTEMPTS),
+      practiceSubmissionCount: Number(existingUser.practiceSubmissionCount || 0),
+      lastPracticedAt: existingUser.lastPracticedAt,
     })
     setAttempt(createBlankAttempt(accountName, normalizedUserName))
     setScreen('dashboard')
@@ -457,10 +476,7 @@ function App() {
       return
     }
     try {
-      const data = await callSupabaseFunction('admin-create-username', {
-        adminUsername: session?.adminUsername,
-        adminPassword: session?.adminPassword,
-      })
+      const data = await callSupabaseFunction('admin-create-username', {}, { adminToken: session?.adminToken })
       setUsers((current) => ({ ...userRowsToMap([data.user]), ...current }))
       showToast('success', `Created username ${data.user.username}.`)
     } catch (error) {
@@ -469,11 +485,16 @@ function App() {
   }
 
   const logout = () => {
+    if (session?.role === 'admin' && session.adminToken) {
+      callSupabaseFunction('admin-logout', {}, { adminToken: session.adminToken }).catch(() => {})
+    }
     setSession(null)
     setScreen('login')
     setStep('Assessment')
     setIncomeTab('Income and Tax summary')
     setAssetTab('Assets Summary')
+    setEntryMode('practice')
+    setAssessmentConfirmOpen(false)
   }
 
   const currentSaveKey = () => (step === 'Income and Tax' ? incomeTab : step === 'Assets' ? assetTab : step)
@@ -559,8 +580,17 @@ function App() {
     }
   }
 
+  const resetWorkspace = () => {
+    setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
+    setStep('Assessment')
+    setIncomeTab('Income and Tax summary')
+    setAssetTab('Assets Summary')
+    setScreen('dashboard')
+  }
+
   const saveReturn = async () => {
-    if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || ACTIVE_ATTEMPTS)) {
+    if (entryMode === 'assessment'
+      && Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || ACTIVE_ATTEMPTS)) {
       showToast('error', 'Attempt 1 has already been submitted. Attempts 2-7 are currently locked.')
       setScreen('dashboard')
       return
@@ -586,7 +616,7 @@ function App() {
     }
     const submitted = {
       ...attempt,
-      status: 'submitted',
+      status: entryMode === 'practice' ? 'practice-complete' : 'submitted',
       submittedAt: new Date().toISOString(),
       score: null,
       mistakes: [],
@@ -595,6 +625,24 @@ function App() {
     let savedAttemptLimit = Number(session?.attemptLimit || ACTIVE_ATTEMPTS)
     if (!isSupabaseConfigured) {
       showToast('error', 'Unable to save the return right now. Please try again shortly.')
+      return
+    }
+    if (entryMode === 'practice') {
+      try {
+        const data = await callSupabaseFunction('submit-practice', {
+          username: session?.accountKey || session?.userName,
+        })
+        setSession((current) => ({
+          ...current,
+          practiceSubmissionCount: Number(data.practiceSubmissionCount || 0),
+          lastPracticedAt: data.lastPracticedAt,
+        }))
+      } catch (error) {
+        showToast('error', error.message || 'Could not complete the practice submission.')
+        return
+      }
+      showToast('success', 'Practice submission completed.')
+      resetWorkspace()
       return
     }
     try {
@@ -621,18 +669,22 @@ function App() {
       }
       return
     }
-    const remainingAttempts = Math.max(savedAttemptLimit - savedAttemptCount, 0)
-    showToast(
-      'success',
-      remainingAttempts
-        ? `Return saved. ${remainingAttempts} attempt${remainingAttempts === 1 ? '' : 's'} remaining.`
-        : `Return saved. You have now used all ${savedAttemptLimit} attempts.`,
-    )
+    showToast('success', 'Assessment 1 submitted successfully.')
+    resetWorkspace()
+  }
+
+  const startEntry = (mode) => {
+    if (mode === 'assessment'
+      && Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || ACTIVE_ATTEMPTS)) {
+      showToast('error', 'Assessment 1 has already been submitted. Assessments 2-7 are currently locked.')
+      return
+    }
+    setEntryMode(mode)
     setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
     setStep('Assessment')
     setIncomeTab('Income and Tax summary')
     setAssetTab('Assets Summary')
-    setScreen('dashboard')
+    setScreen('form')
   }
 
   if (screen === 'login') {
@@ -664,7 +716,7 @@ function App() {
   }
 
   if (screen === 'preview') {
-    return <AttemptPreview attempt={attempt} onBack={() => setScreen('form')} onNotify={showToast} />
+    return <AttemptPreview attempt={attempt} onBack={() => setScreen('form')} onNotify={showToast} mode={entryMode} />
   }
 
   return (
@@ -675,17 +727,10 @@ function App() {
           userName={session?.userName || ''}
           attemptCount={Number(session?.attemptCount || 0)}
           attemptLimit={Number(session?.attemptLimit || ACTIVE_ATTEMPTS)}
-          onEntry={() => {
-            if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || ACTIVE_ATTEMPTS)) {
-              showToast('error', 'Attempt 1 has already been submitted. Attempts 2-7 are currently locked.')
-              return
-            }
-            setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
-            setStep('Assessment')
-            setIncomeTab('Income and Tax summary')
-            setAssetTab('Assets Summary')
-            setScreen('form')
-          }}
+          practiceSubmissionCount={Number(session?.practiceSubmissionCount || 0)}
+          lastPracticedAt={session?.lastPracticedAt}
+          onPractice={() => startEntry('practice')}
+          onAssessment={() => setAssessmentConfirmOpen(true)}
         />
       )}
       {screen === 'form' && (
@@ -699,12 +744,22 @@ function App() {
           assetTab={assetTab}
           setAssetTab={setAssetTab}
           availableIncomeTabs={availableIncomeTabs}
+          mode={entryMode}
           onBack={() => setScreen('dashboard')}
           onSaveDraft={saveDraft}
           onNext={nextStep}
           onRequireSave={() => showToast('error', 'Please save draft before going next.')}
           onPreview={() => setScreen('preview')}
           onSaveReturn={saveReturn}
+        />
+      )}
+      {assessmentConfirmOpen && (
+        <ConfirmationDialog
+          onCancel={() => setAssessmentConfirmOpen(false)}
+          onConfirm={() => {
+            setAssessmentConfirmOpen(false)
+            startEntry('assessment')
+          }}
         />
       )}
     </OfficeShell>
@@ -830,7 +885,15 @@ function AttemptMeter({ used, limit = ACTIVE_ATTEMPTS, compact = false }) {
   )
 }
 
-function TraineeDashboard({ userName, attemptCount, attemptLimit, onEntry }) {
+function TraineeDashboard({
+  userName,
+  attemptCount,
+  attemptLimit,
+  practiceSubmissionCount,
+  lastPracticedAt,
+  onPractice,
+  onAssessment,
+}) {
   const remaining = Math.max(attemptLimit - attemptCount, 0)
   const limitReached = remaining === 0
   return (
@@ -839,13 +902,26 @@ function TraineeDashboard({ userName, attemptCount, attemptLimit, onEntry }) {
         <h2>PSR Detail Entries</h2>
         <span className="candidate-chip">Candidate: {userName}</span>
       </div>
-      <div className={`attempt-summary${limitReached ? ' limit-reached' : ''}`}>
-        <div className="attempt-summary-copy">
-          <span>Attempt allowance</span>
-          <strong>{limitReached ? 'Attempt 1 submitted' : 'Attempt 1 available'}</strong>
+      <div className="training-workflow">
+        <div className="practice-workflow">
+          <div className="workflow-copy">
+            <span>Practice submissions</span>
+            <strong>{practiceSubmissionCount}</strong>
+            <small>{lastPracticedAt ? `Last completed ${new Date(lastPracticedAt).toLocaleString()}` : 'No practice submitted yet'}</small>
+          </div>
+          <button type="button" className="secondary-button" onClick={onPractice}>Start Practice</button>
         </div>
-        <AttemptMeter used={attemptCount} limit={attemptLimit} />
-        <p>{limitReached ? <><Lock size={15} aria-hidden="true" /> Attempts 2-7 are currently locked.</> : 'Complete and submit the first attempt. Attempts 2-7 are currently locked.'}</p>
+        <div className={`assessment-workflow${limitReached ? ' limit-reached' : ''}`}>
+          <div className="workflow-copy">
+            <span>Assessment</span>
+            <strong>{limitReached ? 'Assessment 1 submitted' : 'Assessment 1 available'}</strong>
+            <small>Assessments 2-7 are currently locked</small>
+          </div>
+          <AttemptMeter used={attemptCount} limit={attemptLimit} />
+          <button type="button" className="success-button" disabled={limitReached} onClick={onAssessment}>
+            {limitReached ? 'Assessment submitted' : 'Begin Assessment'}
+          </button>
+        </div>
       </div>
       <div className="filter-panel">
         <label>Assessment Year <select defaultValue="2025-2026"><option>2025-2026</option></select></label>
@@ -879,12 +955,31 @@ function TraineeDashboard({ userName, attemptCount, attemptLimit, onEntry }) {
             <td>{traineeRow.taxPaid173}</td>
             <td>{traineeRow.netAsset}</td>
             <td><span className="status-pill">{traineeRow.psrStatus}</span></td>
-            <td><span className={`status-pill muted${limitReached ? ' locked' : ''}`}>{limitReached ? 'LIMIT_REACHED' : traineeRow.entryStatus}</span></td>
-            <td><button type="button" className="row-button" disabled={limitReached} onClick={onEntry}>{limitReached ? 'Limit reached' : 'Entry'}</button></td>
+            <td><span className={`status-pill muted${limitReached ? ' locked' : ''}`}>{limitReached ? 'ASSESSMENT_SUBMITTED' : traineeRow.entryStatus}</span></td>
+            <td className="trainee-actions">
+              <button type="button" className="row-button" onClick={onPractice}>Practice</button>
+              <button type="button" className="row-button" disabled={limitReached} onClick={onAssessment}>Assessment</button>
+            </td>
           </tr>
         </tbody>
       </table>
     </section>
+  )
+}
+
+function ConfirmationDialog({ onCancel, onConfirm }) {
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+      <section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="assessment-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="dialog-icon"><FileText size={22} /></div>
+        <h2 id="assessment-confirm-title">Begin Assessment 1?</h2>
+        <p>This submission will be recorded for marking. Practice submissions remain available without limit.</p>
+        <div className="dialog-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>Cancel</button>
+          <button type="button" className="success-button" autoFocus onClick={onConfirm}>Begin Assessment</button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -899,6 +994,7 @@ function FormWorkspace(props) {
     assetTab,
     setAssetTab,
     availableIncomeTabs,
+    mode,
     onBack,
     onSaveDraft,
     onNext,
@@ -972,6 +1068,7 @@ function FormWorkspace(props) {
     <section className="form-space pdf-like">
       <div className="entry-header">
         <button type="button" className="text-button" onClick={onBack}><ChevronLeft size={18} /> Back to PSR Detail Entries</button>
+        <span className={`mode-indicator ${mode}`}>{mode === 'practice' ? 'Practice Mode' : 'Assessment 1'}</span>
       </div>
       <div className="nbr-heading">
         <strong>জাতীয় রাজস্ব বোর্ড</strong>
@@ -1030,7 +1127,9 @@ function FormWorkspace(props) {
         {finalPage ? (
           <>
             <button type="button" className="outline-button" onClick={onPreview}>Preview Return</button>
-            <button type="button" className="success-button" disabled={!finalSaved} onClick={onSaveReturn}>Save Return</button>
+            <button type="button" className="success-button" disabled={!finalSaved} onClick={onSaveReturn}>
+              {mode === 'practice' ? 'Complete Practice' : 'Submit Assessment'}
+            </button>
           </>
         ) : (
           <button type="button" className={nextEnabled ? 'next-button enabled' : 'next-button'} disabled={!nextEnabled || (stepIndex === steps.length - 1 && assetTab === 'Living Expenditure')} onClick={handleNext}>
@@ -1369,6 +1468,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       attempts: userAttempts,
       latest: userAttempts[0],
       attemptLimit: Number(user.attemptLimit || ACTIVE_ATTEMPTS),
+      practiceSubmissionCount: Number(user.practiceSubmissionCount || 0),
     }
   })
   const orphanAttemptRows = Object.entries(grouped)
@@ -1380,8 +1480,13 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       attempts: userAttempts,
       latest: userAttempts[0],
       attemptLimit: ACTIVE_ATTEMPTS,
+      practiceSubmissionCount: 0,
     }))
   const allUserRows = [...userRows, ...orphanAttemptRows]
+  const totalPracticeSubmissions = allUserRows.reduce((sum, user) => sum + user.practiceSubmissionCount, 0)
+  const averageScore = attempts.length
+    ? attempts.reduce((sum, item) => sum + Number(item.score || 0), 0) / attempts.length
+    : 0
 
   const copyUsername = async (username) => {
     try {
@@ -1427,19 +1532,20 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       </header>
       <section className="admin-grid">
         <div className="admin-card"><strong>{allUserRows.length}</strong><span>Created users</span></div>
-        <div className="admin-card"><strong>{attempts.length}</strong><span>Total attempts</span></div>
-        <div className="admin-card"><strong>{attempts.length ? Math.round(attempts.reduce((sum, item) => sum + Number(item.score || 0), 0) / attempts.length) : 0}</strong><span>Average mark</span></div>
+        <div className="admin-card"><strong>{totalPracticeSubmissions}</strong><span>Practice submissions</span></div>
+        <div className="admin-card"><strong>{attempts.length}</strong><span>Assessment submissions</span></div>
+        <div className="admin-card"><strong>{formatScore(averageScore)}</strong><span>Average assessment score</span></div>
       </section>
       <table className="data-table admin-table">
-        <thead><tr><th>Username</th><th>Attempts</th><th>Latest attempt</th><th>Latest score</th><th>Action</th></tr></thead>
+        <thead><tr><th>Username</th><th>Practice submissions</th><th>Assessment</th><th>Submitted</th><th>Score</th><th>Action</th></tr></thead>
         <tbody>
           {dataLoading && (
-            <tr><td colSpan="5" className="empty-cell">Loading Supabase data...</td></tr>
+            <tr><td colSpan="6" className="empty-cell">Loading Supabase data...</td></tr>
           )}
           {!dataLoading && allUserRows.length === 0 && (
-            <tr><td colSpan="5" className="empty-cell">No trainee usernames yet. Create one to begin.</td></tr>
+            <tr><td colSpan="6" className="empty-cell">No trainee usernames yet. Create one to begin.</td></tr>
           )}
-          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest, attemptLimit }) => {
+          {allUserRows.flatMap(({ key, username, attempts: userAttempts, latest, attemptLimit, practiceSubmissionCount }) => {
             const expanded = Boolean(expandedUsers[key])
             const userRow = (
               <tr key={key}>
@@ -1449,11 +1555,14 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
                   </button>
                 </td>
                 <td>
+                  <strong className="practice-count">{practiceSubmissionCount}</strong>
+                </td>
+                <td>
                   <span className="attempt-count-label">{userAttempts.length} / {attemptLimit}</span>
                   <AttemptMeter used={userAttempts.length} limit={attemptLimit} compact />
                 </td>
                 <td>{latest ? new Date(latest.submittedAt || latest.createdAt).toLocaleString() : 'No attempts yet'}</td>
-                <td>{latest ? `${latest.score}/100` : '-'}</td>
+                <td>{latest ? `${formatScore(latest.score)}%` : '-'}</td>
                 <td className="admin-actions">
                   <button type="button" className="row-button" disabled={!userAttempts.length} onClick={() => setExpandedUsers((current) => ({ ...current, [key]: !expanded }))}>
                     {expanded ? 'Hide attempts' : 'View attempts'}
@@ -1465,10 +1574,11 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
             const attemptRows = expanded
               ? userAttempts.map((item, index) => (
                 <tr key={item.id} className="attempt-detail-row">
-                  <td>Attempt {userAttempts.length - index}</td>
+                  <td>Assessment {userAttempts.length - index}</td>
+                  <td>-</td>
                   <td>{item.status}</td>
                   <td>{new Date(item.submittedAt || item.createdAt).toLocaleString()}</td>
-                  <td>{item.score}/100</td>
+                  <td>{formatScore(item.score)}%</td>
                   <td><button type="button" className="row-button" onClick={() => onPreview(item)}><Eye size={14} /> Preview attempt</button></td>
                 </tr>
               ))
@@ -1481,11 +1591,9 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
   )
 }
 
-function AttemptPreview({ attempt, onBack, onNotify, admin = false }) {
+function AttemptPreview({ attempt, onBack, onNotify, admin = false, mode = 'assessment' }) {
   const noopPatch = () => {}
-  const scoringNotes = attempt.status === 'submitted'
-    ? (attempt.mistakes || [])
-    : buildPlaceholderMistakes(attempt)
+  const scoringNotes = attempt.mistakes || []
   const copyId = async () => {
     try {
       await navigator.clipboard.writeText(attempt.userName || attempt.userCode || '')
@@ -1504,23 +1612,25 @@ function AttemptPreview({ attempt, onBack, onNotify, admin = false }) {
         <div className="return-header">
           <FileText size={42} />
           <div>
-            <h1>Attempt Preview</h1>
+            <h1>{admin || mode === 'assessment' ? 'Assessment Preview' : 'Practice Preview'}</h1>
             <p>
               <button type="button" className="copy-username inline-copy" onClick={copyId}>{attempt.userName}</button>
               {' '} - {attempt.status}
             </p>
           </div>
-          <strong>{admin ? `Score ${attempt.score}/100` : 'Practice Draft'}</strong>
+          <strong>{admin ? `Score ${formatScore(attempt.score)}%` : mode === 'practice' ? 'Practice Mode' : 'Assessment 1'}</strong>
         </div>
-        <section className="mistake-panel">
-          <h2>Detected issues / scoring notes</h2>
-          {attempt.marking && (
-            <p>{attempt.marking.correctFields} of {attempt.marking.totalFields} fields correct using {attempt.marking.scoringVersion}.</p>
-          )}
-          {scoringNotes.length
-            ? <ul>{scoringNotes.map((mistake) => <li key={mistake}>{mistake}</li>)}</ul>
-            : <p>No mistakes detected. Every scored field matches the reference video.</p>}
-        </section>
+        {admin && (
+          <section className="mistake-panel">
+            <h2>Detected issues / scoring notes</h2>
+            {attempt.marking && (
+              <p>{attempt.marking.correctFields} of {attempt.marking.totalFields} scored answers correct using {attempt.marking.scoringVersion}.</p>
+            )}
+            {scoringNotes.length
+              ? <ul>{scoringNotes.map((mistake) => <li key={mistake}>{mistake}</li>)}</ul>
+              : <p>No mistakes detected. Every scored answer matches the reference video.</p>}
+          </section>
+        )}
         <div className="preview-form-pages">
           <PreviewBlock title="Assessment">
             <AssessmentTopFields attempt={attempt} patchAttempt={noopPatch} />
@@ -1568,16 +1678,6 @@ function Toast({ type, message }) {
 
 function Footer() {
   return <footer className="app-footer">Copyright © 2026. National Board of Revenue. All rights reserved.</footer>
-}
-
-function buildPlaceholderMistakes(attempt) {
-  const issues = []
-  if (!attempt.assessment.name) issues.push('Assessment: taxpayer name was not filled.')
-  if (attempt.incomeChecked.employment && !attempt.jobType) issues.push('Income Summary: চাকরির ধরণ was required but not selected.')
-  if (attempt.incomeChecked.rent && !attempt.rent.propertyDescription) issues.push('Income from rent: required property description was not filled.')
-  if (!Object.values(attempt.incomeChecked).some(Boolean)) issues.push('Income Summary: no income source was selected.')
-  if (!issues.length) issues.push('No rule-based mistakes detected yet. Final marking rules can be added later.')
-  return issues
 }
 
 export default App

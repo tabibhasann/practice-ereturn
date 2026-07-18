@@ -1,73 +1,33 @@
 # Supabase Setup
 
-Supabase project created for this app:
+Production project:
 
 ```text
-project_id: mgkiqmupnjazaegqwpqy
-url: https://mgkiqmupnjazaegqwpqy.supabase.co
-region: ap-southeast-1
+project_id: wiqtbrexjjqzdtyvbwdm
+name: practice-ereturn
+region: ap-south-1
 ```
 
-Local environment file:
+The frontend uses only the publishable key. `.env.local` is intentionally not committed.
 
-```text
-.env.local
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_PUBLISHABLE_KEY=...
-```
+## Data Model
 
-`.env.local` is intentionally not committed.
+- `trainee_users` stores admin-created usernames, Assessment 1 limit, practice count, and last-practiced timestamp.
+- `return_attempts` stores only submitted assessments, including the complete payload, server score, and exact mistakes.
+- `admin_credentials` stores the one-way salted admin password hash.
+- `admin_sessions` stores hashed, expiring admin session tokens.
+- `admin_login_attempts` provides brute-force throttling.
 
-## Tables Created
+## Security
 
-### trainee_users
+- All exposed tables use RLS and deny direct `anon` and `authenticated` access.
+- Client table privileges are revoked; browser work is routed through Edge Functions.
+- Admin functions require an expiring server-side session; logout revokes it.
+- Practice completion is an atomic database increment and stores no form payload.
+- Assessment scoring is authoritative on the server; browser-supplied score data is ignored.
+- Missing Supabase configuration fails closed.
 
-Stores admin-created trainee usernames.
+## Remaining Product Input
 
-Columns:
-
-- `id`
-- `username`
-- `display_name`
-- `created_at`
-- `disabled_at`
-
-### return_attempts
-
-Stores every submitted attempt.
-
-Columns:
-
-- `id`
-- `trainee_user_id`
-- `username`
-- `submitted_at`
-- `score`
-- `mistakes`
-- `payload`
-
-## Current Behavior
-
-- Admin creates a unique username such as `USR-ABC123`.
-- Trainee logs in with that username only.
-- Unknown usernames are blocked.
-- Submitted attempts are inserted into Supabase.
-- Admin dashboard reads usernames and attempts from Supabase.
-- If Supabase env vars are missing, the app falls back to localStorage for local demo use.
-
-## Security Note
-
-This is currently a frontend-only Supabase integration. To make the demo work from the browser, the public anon role can read/create trainee usernames and read/insert attempts through RLS policies.
-
-Before using this as a real public exam system, harden it with one of these:
-
-- Supabase Auth for admin and restricted admin-only username creation.
-- Edge Functions for admin-only create-user and review-attempt operations.
-- Tighter RLS policies so trainees can only submit under their own assigned username and cannot read all attempts.
-
-## Remaining Product Work
-
-- Marking-policy changes if the examiner later supplies different weights or accepted-answer tolerances.
-- Detailed mistake detection.
-- Full official-style preview if required by examiners.
-- Production-grade admin authentication.
+- Changes to accepted answers, weights, or tolerances if the examiner revises the marking policy.
+- Unlock rules and answer keys for Assessments 2-7 when those assessments are supplied.

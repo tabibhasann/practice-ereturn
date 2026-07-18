@@ -14,7 +14,7 @@ Deno.serve(async (req: Request) => {
     return requestBodyError(error)
   }
   const supabase = createAdminClient()
-  const adminError = await requireAdmin(supabase, body, req)
+  const adminError = await requireAdmin(supabase, req)
   if (adminError) return adminError
   let recovery = null
   if (body.legacyRecovery) {

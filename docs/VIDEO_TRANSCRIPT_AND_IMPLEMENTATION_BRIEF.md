@@ -18,9 +18,9 @@ After saving Assessment, the user moves to `Income and Tax`. Initially, only `In
 
 The PDFs provide the exact tables for the income pages. PDF 1 contains the income summary, tax calculation, and tax payment rows. PDF 2 contains the employment schedule. PDF 3 contains the rent schedule. PDF 4 contains the financial assets schedule. PDFs 5 and 6 contain the tax rebate schedule.
 
-The form then moves to `Assets`, which has `Assets Summary` and `Living Expenditure`. PDF 7 is the assets summary source. PDFs 8 and 9 show the living expenditure table. After the final living expenditure page is saved, the user can save the return.
+The form then moves to `Assets`, which has `Assets Summary` and `Living Expenditure`. PDF 7 is the assets summary source. PDFs 8 and 9 show the living expenditure table. After the final living expenditure page is saved, the user can complete the current practice or assessment.
 
-When a trainee saves the return, the attempt should be logged for admin review and the trainee should be returned to the dashboard. Trainees should not browse old attempts. The admin dashboard should show users, attempts, scores, and a preview. This original video does not show scoring rules; the later `new video.mp4` supplies the completed answer key now implemented by the server-side marking engine.
+The implemented product separates unlimited, unscored practice from Assessment 1. Practice retains only a completion count. Assessment stores the full marked submission for admin review. Trainees do not browse old submissions or see scores. This original video does not show scoring rules; the later `new video.mp4` supplies the completed answer key now implemented by the server-side marking engine.
 
 ## Field Sources
 
@@ -38,5 +38,5 @@ When a trainee saves the return, the attempt should be logged for admin review a
 - The current app uses manual numbers only; it does not calculate totals.
 - Required fields block draft save and show a red toast.
 - Successful saves show a green toast and unlock next navigation.
-- Admin credential is `admin / admin2026`.
-- Admin-created usernames and submitted attempts are stored in Supabase when the local Supabase env vars are configured.
+- Admin authentication uses a salted password hash, rate-limited login, and an expiring server-side session.
+- Admin-created usernames, practice counts, and assessment submissions are stored in Supabase. Missing configuration fails closed.

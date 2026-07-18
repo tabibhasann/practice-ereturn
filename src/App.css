@@ -604,7 +604,7 @@ button:not(:disabled):hover {
 }
 
 .form-mode .entry-header {
-  display: none;
+  display: flex;
 }
 
 .text-button {
@@ -1195,6 +1195,96 @@ button:not(:disabled):hover {
   font-size: 13px;
 }
 
+.training-workflow {
+  max-width: 1060px;
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(420px, 1.7fr);
+  gap: 12px;
+  margin: 0 auto 14px;
+}
+
+.practice-workflow,
+.assessment-workflow {
+  min-height: 116px;
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #cbdde1;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.practice-workflow {
+  grid-template-columns: 1fr auto;
+  border-left: 4px solid #087aa4;
+}
+
+.assessment-workflow {
+  grid-template-columns: minmax(170px, 1fr) minmax(210px, 1.4fr) auto;
+  border-left: 4px solid #159275;
+}
+
+.assessment-workflow.limit-reached {
+  border-color: #dfc5c2;
+  border-left-color: #b84a40;
+  background: #fff9f8;
+}
+
+.workflow-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.workflow-copy span {
+  color: #687d84;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workflow-copy strong {
+  color: #203f48;
+  font-size: 19px;
+}
+
+.workflow-copy small {
+  overflow: hidden;
+  color: #71858b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.training-workflow .secondary-button,
+.training-workflow .success-button {
+  width: auto;
+  white-space: nowrap;
+}
+
+.trainee-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #9fc9d6;
+  color: #17657d;
+  background: #eef8fb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mode-indicator.assessment {
+  color: #0d735c;
+  border-color: #9bcfbe;
+  background: #eef9f5;
+}
+
 .attempt-summary {
   max-width: 1060px;
   display: grid;
@@ -1362,7 +1452,7 @@ button:not(:disabled):hover {
 .admin-grid {
   max-width: 1100px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin: 0 auto 18px;
 }
@@ -1440,6 +1530,58 @@ button:not(:disabled):hover {
   padding-left: 28px;
   color: #58727a;
   font-weight: 700;
+}
+
+.practice-count {
+  color: #126f88;
+  font-size: 18px;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(20, 35, 40, 0.5);
+}
+
+.confirmation-dialog {
+  width: min(420px, 100%);
+  padding: 26px;
+  border: 1px solid #c9dadd;
+  background: #fff;
+  box-shadow: 0 20px 70px rgba(19, 42, 49, 0.24);
+}
+
+.dialog-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  color: #0b735d;
+  background: #e9f6f2;
+}
+
+.confirmation-dialog h2 {
+  margin: 0 0 8px;
+  color: #203b44;
+  font-size: 20px;
+}
+
+.confirmation-dialog p {
+  margin: 0;
+  color: #61757c;
+  line-height: 1.55;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 22px;
 }
 
 .mistake-panel {
@@ -1641,7 +1783,8 @@ button:not(:disabled):hover {
 }
 
 @media (max-width: 900px) {
-  .office-shell {
+  .office-shell,
+  .office-shell.form-mode {
     grid-template-columns: 1fr;
   }
 
@@ -1709,6 +1852,14 @@ button:not(:disabled):hover {
     grid-template-columns: 1fr;
   }
 
+  .training-workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-workflow {
+    grid-template-columns: 1fr;
+  }
+
   .admin-header,
   .return-header {
     align-items: flex-start;
@@ -1753,6 +1904,13 @@ button:not(:disabled):hover {
     gap: 8px;
   }
 
+  .form-mode .topbar {
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-content: initial;
+  }
+
   .topbar-brand {
     transform: none;
   }
@@ -1780,6 +1938,19 @@ button:not(:disabled):hover {
   .attempt-summary {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .practice-workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-copy small {
+    white-space: normal;
+  }
+
+  .training-workflow .secondary-button,
+  .training-workflow .success-button {
+    width: 100%;
   }
 
   .attempt-summary p {

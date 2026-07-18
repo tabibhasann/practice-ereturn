@@ -1,4 +1,4 @@
-import { corsHeaders, createAdminClient, guardRequest, jsonResponse, makeUsername, readJson, requestBodyError, requireAdmin } from '../_shared/helpers.ts'
+import { corsHeaders, createAdminClient, guardRequest, jsonResponse, makeUsername, requireAdmin } from '../_shared/helpers.ts'
 
 Deno.serve(async (req: Request) => {
   const requestError = guardRequest(req)
@@ -6,14 +6,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed.' }, 405)
 
-  let body
-  try {
-    body = await readJson(req)
-  } catch (error) {
-    return requestBodyError(error)
-  }
   const supabase = createAdminClient()
-  const adminError = await requireAdmin(supabase, body, req)
+  const adminError = await requireAdmin(supabase, req)
   if (adminError) return adminError
 
   for (let attempt = 0; attempt < 10; attempt += 1) {

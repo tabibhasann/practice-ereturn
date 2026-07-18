@@ -1,4 +1,4 @@
-export const SCORING_VERSION = 'video-answer-key-2026-07-18-v1'
+export const SCORING_VERSION = 'video-answer-key-answered-fields-2026-07-19-v2'
 
 const employmentRows = [
   'মূল বেতন',
@@ -225,7 +225,8 @@ function buildRules() {
       label: key,
       expected: value,
     }))
-  })
+  }).filter((rule) => rule.expected === true
+    || (typeof rule.expected !== 'boolean' && String(rule.expected ?? '').trim() !== ''))
 }
 
 export const scoringRuleCount = buildRules().length
@@ -242,7 +243,7 @@ export function markAttempt(attempt = {}) {
   )
 
   return {
-    score: Math.floor((correctCount / details.length) * 100),
+    score: Number(((correctCount / details.length) * 100).toFixed(2)),
     mistakes,
     summary: {
       scoringVersion: SCORING_VERSION,

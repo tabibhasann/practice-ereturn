@@ -12,7 +12,8 @@ test('the complete video answer key scores 100', () => {
 
   assert.equal(result.score, 100)
   assert.equal(result.mistakes.length, 0)
-  assert.equal(result.summary.totalFields, scoringRuleCount)
+  assert.equal(scoringRuleCount, 110)
+  assert.equal(result.summary.totalFields, 110)
   assert.equal(result.summary.correctFields, scoringRuleCount)
   assert.equal(result.summary.scoringVersion, SCORING_VERSION)
 })
@@ -22,7 +23,8 @@ test('a wrong value produces a lower score and an exact mistake', () => {
   attempt.incomeAmounts.totalIncome = '100'
   const result = markAttempt(attempt)
 
-  assert.ok(result.score < 100)
+  assert.equal(result.score, 99.09)
+  assert.equal(result.summary.correctFields, 109)
   assert.equal(result.summary.incorrectFields, 1)
   assert.match(result.mistakes[0], /Income and Tax Summary - totalIncome/)
   assert.match(result.mistakes[0], /expected 1736351; entered 100/)
@@ -38,11 +40,12 @@ test('money commas, Bengali digits, text case, and surrounding spaces are normal
   assert.equal(result.mistakes.length, 0)
 })
 
-test('an unexpected value in a reference-blank field is a mistake', () => {
+test('fields left blank in the video are excluded from scoring', () => {
   const attempt = getAnswerKeyForTests()
   attempt.assessment.telephone = '12345'
   const result = markAttempt(attempt)
 
-  assert.equal(result.summary.incorrectFields, 1)
-  assert.match(result.mistakes[0], /telephone: expected blank; entered 12345/)
+  assert.equal(result.score, 100)
+  assert.equal(result.summary.incorrectFields, 0)
+  assert.equal(result.mistakes.length, 0)
 })
