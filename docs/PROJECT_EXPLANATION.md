@@ -82,10 +82,10 @@ The admin can see:
 - users who submitted attempts
 - number of attempts per user
 - latest attempt time
-- placeholder score
-- preview of the latest attempt and detected placeholder issues
+- server-calculated score
+- preview of every attempt and its exact field-level mistakes
 
-Real scoring/mistake rules are not final yet. The current scoring is intentionally simple so the dashboard is ready for the final criteria later.
+The marking rules are based on the completed reference return in `new video.mp4`. The answer key currently contains 202 scored controls across Assessment, Income and Tax, Assets Summary, and Living Expenditure.
 
 ## Supabase Estimate
 

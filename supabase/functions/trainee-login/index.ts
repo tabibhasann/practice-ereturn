@@ -26,7 +26,7 @@ Deno.serve(async (req: Request) => {
 
   if (countError) return jsonResponse({ error: countError.message }, 500)
 
-  const attemptLimit = Number(data.attempt_limit || 7)
+  const attemptLimit = Math.min(Number(data.attempt_limit || 1), 1)
   const attemptCount = Number(count || 0)
 
   return jsonResponse({

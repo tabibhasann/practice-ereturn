@@ -1,4 +1,5 @@
 import { corsHeaders, createAdminClient, jsonResponse, normalizeUsername, readJson } from '../_shared/helpers.ts'
+import { markAttempt } from '../_shared/scoring.js'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -20,13 +21,28 @@ Deno.serve(async (req: Request) => {
   if (!user) return jsonResponse({ error: 'This username was not created by admin.' }, 404)
   if (user.disabled_at) return jsonResponse({ error: 'This username is disabled.' }, 403)
 
-  const attemptLimit = Number(user.attempt_limit || 7)
+  const attemptLimit = Math.min(Number(user.attempt_limit || 1), 1)
+
+  const { count: existingCount, error: existingCountError } = await supabase
+    .from('return_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('trainee_user_id', user.id)
+
+  if (existingCountError) return jsonResponse({ error: existingCountError.message }, 500)
+  if (Number(existingCount || 0) >= attemptLimit) {
+    return jsonResponse({ error: 'Attempt 1 has already been submitted. Attempts 2-7 are currently locked.' }, 409)
+  }
+
+  const marking = markAttempt(submittedAttempt)
 
   const payload = {
     ...submittedAttempt,
     userName: user.display_name || user.username,
     userCode: String(user.username).toLowerCase(),
     status: 'submitted',
+    score: marking.score,
+    mistakes: marking.mistakes,
+    marking: marking.summary,
   }
 
   const { data, error } = await supabase
@@ -34,8 +50,8 @@ Deno.serve(async (req: Request) => {
     .insert({
       trainee_user_id: user.id,
       username: user.username,
-      score: Number(submittedAttempt.score || 0),
-      mistakes: Array.isArray(submittedAttempt.mistakes) ? submittedAttempt.mistakes : [],
+      score: marking.score,
+      mistakes: marking.mistakes,
       payload,
     })
     .select('*')

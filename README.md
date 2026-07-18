@@ -31,7 +31,7 @@ username: admin
 password: admin2026
 ```
 
-The admin dashboard shows submitted users, attempt counts, placeholder scores, and a preview of each latest attempt. Scoring and mistake detection are deliberately placeholder rules until the final marking criteria are provided.
+The admin dashboard shows submitted users, attempt counts, server-calculated scores, and a full preview of each attempt. The marking key is derived from `new video.mp4`; every scored field and control is compared on the server, and each mismatch records the expected and submitted answer.
 
 The admin dashboard can also create and copy trainee usernames. Created users appear even before they submit an attempt.
 

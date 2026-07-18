@@ -1198,7 +1198,7 @@ button:not(:disabled):hover {
 .attempt-summary {
   max-width: 1060px;
   display: grid;
-  grid-template-columns: minmax(170px, auto) minmax(280px, 1fr) auto;
+  grid-template-columns: minmax(170px, auto) minmax(240px, 1fr);
   align-items: center;
   gap: 18px;
   margin: 0 auto 14px;
@@ -1232,13 +1232,14 @@ button:not(:disabled):hover {
 }
 
 .attempt-summary p {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
   color: #5b7178;
   font-size: 12px;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .attempt-meter {
@@ -1258,10 +1259,22 @@ button:not(:disabled):hover {
   font-weight: 700;
 }
 
-.attempt-slot.used {
+.attempt-slot.submitted {
   border-color: #159275;
   color: #fff;
   background: #159275;
+}
+
+.attempt-slot.available {
+  border-color: #159275;
+  color: #11745f;
+  background: #f3fbf8;
+}
+
+.attempt-slot.locked {
+  border-color: #d8e0e2;
+  color: #a4b0b4;
+  background: #edf1f2;
 }
 
 .attempt-meter.compact {

@@ -14,7 +14,7 @@ Deno.serve(async (req: Request) => {
     const username = makeUsername()
     const { data, error } = await supabase
       .from('trainee_users')
-      .insert({ username, display_name: username })
+      .insert({ username, display_name: username, attempt_limit: 1 })
       .select('*')
       .single()
 

@@ -20,7 +20,7 @@ The PDFs provide the exact tables for the income pages. PDF 1 contains the incom
 
 The form then moves to `Assets`, which has `Assets Summary` and `Living Expenditure`. PDF 7 is the assets summary source. PDFs 8 and 9 show the living expenditure table. After the final living expenditure page is saved, the user can save the return.
 
-When a trainee saves the return, the attempt should be logged for admin review and the trainee should be returned to the dashboard to start a fresh blank attempt. Trainees should not browse old attempts. The admin dashboard should show users, attempts, scores, and a preview. Exact scoring rules are not shown in the video and should remain placeholder until provided.
+When a trainee saves the return, the attempt should be logged for admin review and the trainee should be returned to the dashboard. Trainees should not browse old attempts. The admin dashboard should show users, attempts, scores, and a preview. This original video does not show scoring rules; the later `new video.mp4` supplies the completed answer key now implemented by the server-side marking engine.
 
 ## Field Sources
 

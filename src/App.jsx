@@ -19,6 +19,7 @@ import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 
 const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
 const MAX_ATTEMPTS = 7
+const ACTIVE_ATTEMPTS = 1
 const ATTEMPTS_KEY = 'practice-ereturn-attempts'
 const USERS_KEY = 'practice-ereturn-users'
 
@@ -311,7 +312,7 @@ function userRowsToMap(rows = []) {
     userName: row.display_name || row.username,
     createdAt: row.created_at,
     disabledAt: row.disabled_at,
-    attemptLimit: Number(row.attempt_limit || MAX_ATTEMPTS),
+    attemptLimit: Math.min(Number(row.attempt_limit || ACTIVE_ATTEMPTS), ACTIVE_ATTEMPTS),
   }]))
 }
 
@@ -418,7 +419,7 @@ function App() {
       userName: accountName,
       accountKey: normalizedUserName,
       attemptCount: isSupabaseConfigured ? Number(existingUser.attemptCount || 0) : localAttemptCount,
-      attemptLimit: Number(existingUser.attemptLimit || MAX_ATTEMPTS),
+      attemptLimit: Number(existingUser.attemptLimit || ACTIVE_ATTEMPTS),
     })
     setAttempt(createBlankAttempt(accountName, normalizedUserName))
     setScreen('dashboard')
@@ -546,8 +547,8 @@ function App() {
   }
 
   const saveReturn = async () => {
-    if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || MAX_ATTEMPTS)) {
-      showToast('error', 'You have used all 7 attempts. No further returns can be submitted.')
+    if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || ACTIVE_ATTEMPTS)) {
+      showToast('error', 'Attempt 1 has already been submitted. Attempts 2-7 are currently locked.')
       setScreen('dashboard')
       return
     }
@@ -574,11 +575,11 @@ function App() {
       ...attempt,
       status: 'submitted',
       submittedAt: new Date().toISOString(),
-      score: scoreAttempt(attempt),
-      mistakes: buildPlaceholderMistakes(attempt),
+      score: null,
+      mistakes: [],
     }
     let savedAttemptCount = Number(session?.attemptCount || 0) + 1
-    let savedAttemptLimit = Number(session?.attemptLimit || MAX_ATTEMPTS)
+    let savedAttemptLimit = Number(session?.attemptLimit || ACTIVE_ATTEMPTS)
     if (isSupabaseConfigured) {
       try {
         const data = await callSupabaseFunction('submit-attempt', {
@@ -598,7 +599,7 @@ function App() {
         if (error.message?.includes('used all')) {
           setSession((current) => ({
             ...current,
-            attemptCount: Number(current?.attemptLimit || MAX_ATTEMPTS),
+            attemptCount: Number(current?.attemptLimit || ACTIVE_ATTEMPTS),
           }))
           setScreen('dashboard')
         }
@@ -661,10 +662,10 @@ function App() {
         <TraineeDashboard
           userName={session?.userName || ''}
           attemptCount={Number(session?.attemptCount || 0)}
-          attemptLimit={Number(session?.attemptLimit || MAX_ATTEMPTS)}
+          attemptLimit={Number(session?.attemptLimit || ACTIVE_ATTEMPTS)}
           onEntry={() => {
-            if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || MAX_ATTEMPTS)) {
-              showToast('error', 'You have used all 7 attempts.')
+            if (Number(session?.attemptCount || 0) >= Number(session?.attemptLimit || ACTIVE_ATTEMPTS)) {
+              showToast('error', 'Attempt 1 has already been submitted. Attempts 2-7 are currently locked.')
               return
             }
             setAttempt(createBlankAttempt(session?.userName || '', session?.accountKey || ''))
@@ -798,15 +799,18 @@ function Topbar({ userName }) {
   )
 }
 
-function AttemptMeter({ used, limit = MAX_ATTEMPTS, compact = false }) {
-  const safeUsed = Math.min(Math.max(Number(used || 0), 0), limit)
+function AttemptMeter({ used, limit = ACTIVE_ATTEMPTS, compact = false }) {
+  const safeUsed = Math.min(Math.max(Number(used || 0), 0), MAX_ATTEMPTS)
+  const safeLimit = Math.min(Math.max(Number(limit || 0), 0), MAX_ATTEMPTS)
   return (
-    <div className={`attempt-meter${compact ? ' compact' : ''}`} aria-label={`${safeUsed} of ${limit} attempts used`}>
-      {Array.from({ length: limit }, (_, index) => {
+    <div className={`attempt-meter${compact ? ' compact' : ''}`} aria-label={`${safeUsed} submitted; ${safeLimit} of ${MAX_ATTEMPTS} attempt slots unlocked`}>
+      {Array.from({ length: MAX_ATTEMPTS }, (_, index) => {
         const completed = index < safeUsed
+        const locked = !completed && index >= safeLimit
+        const state = completed ? 'submitted' : locked ? 'locked' : 'available'
         return (
-          <span key={index} className={`attempt-slot${completed ? ' used' : ''}`} title={`Attempt ${index + 1}: ${completed ? 'submitted' : 'available'}`}>
-            {completed ? <Check size={compact ? 11 : 13} aria-hidden="true" /> : index + 1}
+          <span key={index} className={`attempt-slot ${state}`} title={`Attempt ${index + 1}: ${state}`}>
+            {completed ? <Check size={compact ? 11 : 13} aria-hidden="true" /> : locked ? <Lock size={compact ? 10 : 12} aria-hidden="true" /> : index + 1}
           </span>
         )
       })}
@@ -826,10 +830,10 @@ function TraineeDashboard({ userName, attemptCount, attemptLimit, onEntry }) {
       <div className={`attempt-summary${limitReached ? ' limit-reached' : ''}`}>
         <div className="attempt-summary-copy">
           <span>Attempt allowance</span>
-          <strong>{limitReached ? 'All attempts used' : `${remaining} of ${attemptLimit} remaining`}</strong>
+          <strong>{limitReached ? 'Attempt 1 submitted' : 'Attempt 1 available'}</strong>
         </div>
         <AttemptMeter used={attemptCount} limit={attemptLimit} />
-        <p>{limitReached ? <><Lock size={15} aria-hidden="true" /> No more returns can be submitted.</> : `Your next completed return will be attempt ${attemptCount + 1}.`}</p>
+        <p>{limitReached ? <><Lock size={15} aria-hidden="true" /> Attempts 2-7 are currently locked.</> : 'Complete and submit the first attempt. Attempts 2-7 are currently locked.'}</p>
       </div>
       <div className="filter-panel">
         <label>Assessment Year <select defaultValue="2025-2026"><option>2025-2026</option></select></label>
@@ -1352,7 +1356,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       createdAt: user.createdAt,
       attempts: userAttempts,
       latest: userAttempts[0],
-      attemptLimit: Number(user.attemptLimit || MAX_ATTEMPTS),
+      attemptLimit: Number(user.attemptLimit || ACTIVE_ATTEMPTS),
     }
   })
   const orphanAttemptRows = Object.entries(grouped)
@@ -1363,7 +1367,7 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
       createdAt: userAttempts[0]?.createdAt,
       attempts: userAttempts,
       latest: userAttempts[0],
-      attemptLimit: MAX_ATTEMPTS,
+      attemptLimit: ACTIVE_ATTEMPTS,
     }))
   const allUserRows = [...userRows, ...orphanAttemptRows]
 
@@ -1446,6 +1450,9 @@ function AdminDashboard({ attempts, users, dataLoading, onCreateUser, onLogout, 
 
 function AttemptPreview({ attempt, onBack, onNotify, admin = false }) {
   const noopPatch = () => {}
+  const scoringNotes = attempt.status === 'submitted'
+    ? (attempt.mistakes || [])
+    : buildPlaceholderMistakes(attempt)
   const copyId = async () => {
     try {
       await navigator.clipboard.writeText(attempt.userName || attempt.userCode || '')
@@ -1474,9 +1481,12 @@ function AttemptPreview({ attempt, onBack, onNotify, admin = false }) {
         </div>
         <section className="mistake-panel">
           <h2>Detected issues / scoring notes</h2>
-          <ul>
-            {(attempt.mistakes?.length ? attempt.mistakes : buildPlaceholderMistakes(attempt)).map((mistake) => <li key={mistake}>{mistake}</li>)}
-          </ul>
+          {attempt.marking && (
+            <p>{attempt.marking.correctFields} of {attempt.marking.totalFields} fields correct using {attempt.marking.scoringVersion}.</p>
+          )}
+          {scoringNotes.length
+            ? <ul>{scoringNotes.map((mistake) => <li key={mistake}>{mistake}</li>)}</ul>
+            : <p>No mistakes detected. Every scored field matches the reference video.</p>}
         </section>
         <div className="preview-form-pages">
           <PreviewBlock title="Assessment">
@@ -1525,16 +1535,6 @@ function Toast({ type, message }) {
 
 function Footer() {
   return <footer className="app-footer">Copyright © 2026. National Board of Revenue. All rights reserved.</footer>
-}
-
-function scoreAttempt(attempt) {
-  let score = 40
-  if (Object.values(attempt.assessment).filter(Boolean).length >= 6) score += 15
-  if (Object.values(attempt.incomeChecked).some(Boolean)) score += 15
-  if (attempt.savedSteps.Assessment) score += 10
-  if (attempt.savedSteps['Income and Tax']) score += 10
-  if (attempt.savedSteps.Assets) score += 10
-  return Math.min(score, 100)
 }
 
 function buildPlaceholderMistakes(attempt) {

@@ -48,7 +48,7 @@ This audit reflects the current implementation after reviewing the new PDFs in `
 ## Placeholder Or Future Work
 
 - Supabase is connected for the current local environment. If Supabase env vars are missing, the app falls back to localStorage.
-- Scoring and mistake detection are placeholder rules until final marking criteria are provided.
+- Scoring uses the complete field-level answer key demonstrated in `new video.mp4`. The Supabase submission function calculates the score and mistake list; client-provided scores are ignored.
 - The admin preview summarizes the attempt; it is not yet a full PDF-style return renderer.
 - Exact pixel-perfect matching may still need small spacing/color tweaks after stakeholder review, but the field coverage and interaction logic are in place.
 

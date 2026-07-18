@@ -67,7 +67,7 @@ Before using this as a real public exam system, harden it with one of these:
 
 ## Remaining Product Work
 
-- Final scoring rules.
+- Marking-policy changes if the examiner later supplies different weights or accepted-answer tolerances.
 - Detailed mistake detection.
 - Full official-style preview if required by examiners.
 - Production-grade admin authentication.
