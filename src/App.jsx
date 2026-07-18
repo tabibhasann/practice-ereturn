@@ -1410,7 +1410,7 @@ function AssetsSummary({ attempt, patchAttempt }) {
       <p className="center-note"><strong>পরিসম্পদ দায় ও ব্যয় বিবরণী উক্ত করদাতার জন্য প্রযোজ্য নয়</strong></p>
       <div className="asset-lines">
         {assetSummaryRows.map((row, index) => (
-          <label key={row} className="asset-line">
+          <label key={`${index}-${row}`} className="asset-line">
             <span>{index + 1}। {row}</span>
             <MoneyInput value={attempt.assets[`asset${index}`]} onChange={(value) => patch(index, value)} />
           </label>
