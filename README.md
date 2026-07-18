@@ -26,6 +26,13 @@ This is not connected to the real NBR website. It is a safe practice clone where
 
 The production admin credential is provisioned separately. Only its one-way password hash is stored in Supabase; the password is not committed or bundled into the frontend.
 
+## Data safety
+
+- Production data is stored only in Supabase project `wiqtbrexjjqzdtyvbwdm` (`practice-ereturn`). The app does not create browser-only users or attempts when Supabase is unavailable.
+- The admin dashboard includes **Export backup**. Download a JSON backup after each examination session and keep it outside Supabase.
+- Restrict Supabase organization membership, enable MFA for every owner, and pause rather than delete the project. Supabase treats project deletion as permanent.
+- Database schema, policies, scoring logic, and Edge Function source are versioned in this repository. Production secrets are not.
+
 The admin dashboard shows submitted users, attempt counts, server-calculated scores, and a full preview of each attempt. The marking key is derived from `new video.mp4`; every scored field and control is compared on the server, and each mismatch records the expected and submitted answer.
 
 The admin dashboard can also create and copy trainee usernames. Created users appear even before they submit an attempt.

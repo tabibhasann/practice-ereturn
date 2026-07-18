@@ -1,11 +1,18 @@
-import { corsHeaders, createAdminClient, jsonResponse, normalizeUsername, readJson } from '../_shared/helpers.ts'
+import { corsHeaders, createAdminClient, guardRequest, jsonResponse, normalizeUsername, readJson, requestBodyError } from '../_shared/helpers.ts'
 import { markAttempt } from '../_shared/scoring.js'
 
 Deno.serve(async (req: Request) => {
+  const requestError = guardRequest(req)
+  if (requestError) return requestError
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed.' }, 405)
 
-  const body = await readJson(req)
+  let body
+  try {
+    body = await readJson(req)
+  } catch (error) {
+    return requestBodyError(error)
+  }
   const username = normalizeUsername(body.username)
   const submittedAttempt = body.attempt || {}
   if (!username) return jsonResponse({ error: 'Please enter your username.' }, 400)
