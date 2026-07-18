@@ -74,6 +74,17 @@ button:not(:disabled):hover {
   font-size: 12px;
 }
 
+.database-warning {
+  padding: 10px 12px;
+  border: 1px solid #d9a5a5;
+  border-radius: 3px;
+  color: #8d2020;
+  background: #fff1f1;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .manual-button,
 .link-button,
 .inline-link {
@@ -159,6 +170,11 @@ button:not(:disabled):hover {
   height: 36px;
   color: white;
   background: #0b6ea6;
+}
+
+.primary-button:disabled {
+  color: #75858b;
+  background: #dce4e7;
 }
 
 .tin-screen {

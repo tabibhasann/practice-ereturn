@@ -20,7 +20,7 @@ This is not connected to the real NBR website. It is a safe practice clone where
   - tax rebate enables `Tax rebate`
 - Number fields are manual. Totals are not automatically calculated.
 - `Save Return` appears on the final living-expenditure page after saving that page.
-- Created trainee usernames and submitted attempts are stored in Supabase when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are configured. The app keeps a localStorage fallback for offline/local demos.
+- Created trainee usernames and submitted attempts are stored in Supabase. Production sign-in is disabled when `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY` is missing, so the app can never silently create browser-only accounts.
 
 ## Admin
 

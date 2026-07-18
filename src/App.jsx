@@ -20,8 +20,6 @@ import { callSupabaseFunction, isSupabaseConfigured } from './supabaseClient'
 const ADMIN_USERNAME = 'admin-nbr-7k4p9q'
 const MAX_ATTEMPTS = 7
 const ACTIVE_ATTEMPTS = 1
-const ATTEMPTS_KEY = 'practice-ereturn-attempts'
-const USERS_KEY = 'practice-ereturn-users'
 
 const steps = ['Assessment', 'Income and Tax', 'Assets']
 
@@ -265,44 +263,8 @@ function createBlankAttempt(userName = '', userCode = '') {
   }
 }
 
-function readAttempts() {
-  try {
-    return JSON.parse(localStorage.getItem(ATTEMPTS_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-function writeAttempts(attempts) {
-  localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts))
-}
-
-function readUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || '{}')
-  } catch {
-    return {}
-  }
-}
-
-function writeUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
 function normalizeUserName(userName) {
   return userName.trim().toLowerCase()
-}
-
-function attemptUserKey(attempt) {
-  return attempt.userCode || normalizeUserName(attempt.userName || '')
-}
-
-function createUsername(existingUsers) {
-  let username = ''
-  do {
-    username = `USR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-  } while (existingUsers[normalizeUserName(username)])
-  return username
 }
 
 function userRowsToMap(rows = []) {
@@ -337,8 +299,8 @@ function App() {
   const [incomeTab, setIncomeTab] = useState('Income and Tax summary')
   const [assetTab, setAssetTab] = useState('Assets Summary')
   const [attempt, setAttempt] = useState(() => createBlankAttempt())
-  const [attempts, setAttempts] = useState(() => readAttempts())
-  const [users, setUsers] = useState(() => readUsers())
+  const [attempts, setAttempts] = useState([])
+  const [users, setUsers] = useState({})
   const [dataLoading, setDataLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [previewAttempt, setPreviewAttempt] = useState(null)
@@ -347,16 +309,6 @@ function App() {
     setToast({ type, message })
     window.setTimeout(() => setToast(null), 2400)
   }
-
-  useEffect(() => {
-    if (isSupabaseConfigured) return
-    writeAttempts(attempts)
-  }, [attempts])
-
-  useEffect(() => {
-    if (isSupabaseConfigured) return
-    writeUsers(users)
-  }, [users])
 
   const loadAdminData = async (adminCredentials) => {
     if (!isSupabaseConfigured) return
@@ -375,6 +327,10 @@ function App() {
   const login = async ({ userName, password }) => {
     const trimmedUserName = userName.trim()
     const normalizedUserName = normalizeUserName(userName)
+    if (!isSupabaseConfigured) {
+      showToast('error', 'Database connection is not configured. Please contact the administrator.')
+      return
+    }
     if (normalizedUserName === ADMIN_USERNAME) {
       if (!password) {
         showToast('error', 'Please enter the admin password.')
@@ -391,17 +347,15 @@ function App() {
       return
     }
 
-    let existingUser = users[normalizedUserName]
-    if (isSupabaseConfigured) {
-      try {
-        const data = await callSupabaseFunction('trainee-login', { username: trimmedUserName })
-        existingUser = userRowsToMap([data.user])[normalizeUserName(data.user.username)]
-        existingUser.attemptCount = Number(data.attemptCount || 0)
-        setUsers((current) => ({ ...current, [normalizeUserName(data.user.username)]: existingUser }))
-      } catch (error) {
-        showToast('error', error.message || 'This username was not created by admin.')
-        return
-      }
+    let existingUser
+    try {
+      const data = await callSupabaseFunction('trainee-login', { username: trimmedUserName })
+      existingUser = userRowsToMap([data.user])[normalizeUserName(data.user.username)]
+      existingUser.attemptCount = Number(data.attemptCount || 0)
+      setUsers((current) => ({ ...current, [normalizeUserName(data.user.username)]: existingUser }))
+    } catch (error) {
+      showToast('error', error.message || 'This username was not created by admin.')
+      return
     }
     if (!existingUser) {
       showToast('error', 'This username was not created by admin.')
@@ -413,12 +367,11 @@ function App() {
     }
 
     const accountName = existingUser.userName || existingUser.username || trimmedUserName
-    const localAttemptCount = attempts.filter((item) => attemptUserKey(item) === normalizedUserName).length
     setSession({
       role: 'trainee',
       userName: accountName,
       accountKey: normalizedUserName,
-      attemptCount: isSupabaseConfigured ? Number(existingUser.attemptCount || 0) : localAttemptCount,
+      attemptCount: Number(existingUser.attemptCount || 0),
       attemptLimit: Number(existingUser.attemptLimit || ACTIVE_ATTEMPTS),
     })
     setAttempt(createBlankAttempt(accountName, normalizedUserName))
@@ -426,33 +379,20 @@ function App() {
   }
 
   const createTraineeUser = async () => {
-    const username = createUsername(users)
-    const key = normalizeUserName(username)
-
-    if (isSupabaseConfigured) {
-      try {
-        const data = await callSupabaseFunction('admin-create-username', {
-          adminUsername: session?.adminUsername,
-          adminPassword: session?.adminPassword,
-        })
-        setUsers((current) => ({ ...userRowsToMap([data.user]), ...current }))
-        showToast('success', `Created username ${data.user.username}.`)
-      } catch (error) {
-        showToast('error', error.message)
-        return
-      }
+    if (!isSupabaseConfigured) {
+      showToast('error', 'Database connection is not configured. Username was not created.')
       return
     }
-
-    setUsers((current) => ({
-      [key]: {
-        username,
-        userName: username,
-        createdAt: new Date().toISOString(),
-      },
-      ...current,
-    }))
-    showToast('success', `Created username ${username}.`)
+    try {
+      const data = await callSupabaseFunction('admin-create-username', {
+        adminUsername: session?.adminUsername,
+        adminPassword: session?.adminPassword,
+      })
+      setUsers((current) => ({ ...userRowsToMap([data.user]), ...current }))
+      showToast('success', `Created username ${data.user.username}.`)
+    } catch (error) {
+      showToast('error', error.message)
+    }
   }
 
   const logout = () => {
@@ -580,34 +520,33 @@ function App() {
     }
     let savedAttemptCount = Number(session?.attemptCount || 0) + 1
     let savedAttemptLimit = Number(session?.attemptLimit || ACTIVE_ATTEMPTS)
-    if (isSupabaseConfigured) {
-      try {
-        const data = await callSupabaseFunction('submit-attempt', {
-          username: session?.accountKey || session?.userName,
-          attempt: submitted,
-        })
-        setAttempts((current) => [attemptRowToAttempt(data.attempt), ...current])
-        savedAttemptCount = Number(data.attemptCount || savedAttemptCount)
-        savedAttemptLimit = Number(data.attemptLimit || savedAttemptLimit)
+    if (!isSupabaseConfigured) {
+      showToast('error', 'Database connection is not configured. Return was not saved.')
+      return
+    }
+    try {
+      const data = await callSupabaseFunction('submit-attempt', {
+        username: session?.accountKey || session?.userName,
+        attempt: submitted,
+      })
+      setAttempts((current) => [attemptRowToAttempt(data.attempt), ...current])
+      savedAttemptCount = Number(data.attemptCount || savedAttemptCount)
+      savedAttemptLimit = Number(data.attemptLimit || savedAttemptLimit)
+      setSession((current) => ({
+        ...current,
+        attemptCount: savedAttemptCount,
+        attemptLimit: savedAttemptLimit,
+      }))
+    } catch (error) {
+      showToast('error', error.message)
+      if (error.message?.includes('used all')) {
         setSession((current) => ({
           ...current,
-          attemptCount: savedAttemptCount,
-          attemptLimit: savedAttemptLimit,
+          attemptCount: Number(current?.attemptLimit || ACTIVE_ATTEMPTS),
         }))
-      } catch (error) {
-        showToast('error', error.message)
-        if (error.message?.includes('used all')) {
-          setSession((current) => ({
-            ...current,
-            attemptCount: Number(current?.attemptLimit || ACTIVE_ATTEMPTS),
-          }))
-          setScreen('dashboard')
-        }
-        return
+        setScreen('dashboard')
       }
-    } else {
-      setAttempts((current) => [submitted, ...current])
-      setSession((current) => ({ ...current, attemptCount: Number(current?.attemptCount || 0) + 1 }))
+      return
     }
     const remainingAttempts = Math.max(savedAttemptLimit - savedAttemptCount, 0)
     showToast(
@@ -624,7 +563,7 @@ function App() {
   }
 
   if (screen === 'login') {
-    return <LoginScreen onLogin={login} toast={toast} />
+    return <LoginScreen onLogin={login} toast={toast} databaseConfigured={isSupabaseConfigured} />
   }
 
   if (screen === 'admin') {
@@ -699,7 +638,7 @@ function App() {
   )
 }
 
-function LoginScreen({ onLogin, toast }) {
+function LoginScreen({ onLogin, toast, databaseConfigured }) {
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
   const adminMode = normalizeUserName(userName) === ADMIN_USERNAME
@@ -717,6 +656,11 @@ function LoginScreen({ onLogin, toast }) {
         <Logo />
         <h1>Welcome!</h1>
         <p>Enter the username provided by the admin</p>
+        {!databaseConfigured && (
+          <div className="database-warning" role="alert">
+            Database connection unavailable. Sign-in is temporarily disabled.
+          </div>
+        )}
         <label>
           Username
           <input value={userName} onChange={(event) => setUserName(event.target.value)} autoFocus />
@@ -727,7 +671,7 @@ function LoginScreen({ onLogin, toast }) {
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
           </label>
         )}
-        <button type="submit" className="primary-button">Sign In</button>
+        <button type="submit" className="primary-button" disabled={!databaseConfigured}>Sign In</button>
       </form>
     </div>
   )
